@@ -75,3 +75,11 @@ function calculateTax() {
 
   document.getElementById("result").innerHTML = breakdownHTML;
 }
+// Enable button once brackets load
+const checkReady = setInterval(() => {
+  if (brackets.length > 0) {
+    document.getElementById("calcBtn").disabled = false;
+    document.getElementById("calcBtn").removeAttribute("disabled");
+    clearInterval(checkReady);
+  }
+}, 500);
