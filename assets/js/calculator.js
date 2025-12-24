@@ -22,6 +22,36 @@ async function loadBrackets() {
 }
 loadBrackets();
 
+function renderBracketTable() {
+  if (!taxBrackets.length) return;
+  
+  let html = `<h4>2026 Tax Brackets</h4>
+    <div class="table-responsive">
+      <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+          <tr>
+            <th>Income Range (₦)</th>
+            <th>Rate (%)</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+  taxBrackets.forEach(b => {
+    const maxDisplay = b.max === Infinity ? '∞' : formatNaira(b.max);
+    html += `<tr>
+      <td>${formatNaira(b.min + 1)} – ${maxDisplay}</td>
+      <td>${(b.rate * 100).toFixed(2)}%</td>
+    </tr>`;
+  });
+
+  html += `</tbody></table></div>`;
+
+  document.getElementById('bracketTable').innerHTML = html;
+}
+
+loadBrackets().then(renderBracketTable);
+
+
 function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, cryptoGain, expenses) {
   const rentRelief = Math.min(500000, rent * 0.2);
   const pensionRelief = Math.min(200000, pension);
