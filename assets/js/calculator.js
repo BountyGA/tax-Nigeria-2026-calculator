@@ -2,7 +2,7 @@ let taxBrackets = [];
 
 async function loadBrackets() {
   try {
-    const res = await fetch("docs/tax_brackets_reference.md");
+    const res = await fetch("docs/tax_brackets_reference.json");
     taxBrackets = await res.json();
 
     taxBrackets = taxBrackets.map(b => ({
