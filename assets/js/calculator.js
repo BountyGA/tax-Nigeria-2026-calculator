@@ -1,33 +1,25 @@
-let brackets = [];
+let taxBrackets = [];
 
 async function loadBrackets() {
   try {
     const res = await fetch("docs/tax_brackets_reference.md");
-    const text = await res.text();
+    taxBrackets = await res.json();
 
-    const jsonMatch = text.match(/```json([\s\S]*?)```/);
-    if (!jsonMatch) {
-      console.error("No JSON bracket data found in reference file.");
-      return;
-    }
-
-    const jsonString = jsonMatch[1].trim();
-    brackets = JSON.parse(jsonString);
-
-    // Convert null or missing max to Infinity
-    brackets = brackets.map(b => ({
+    taxBrackets = taxBrackets.map(b => ({
       min: b.min,
       max: b.max === null ? Infinity : (b.max ?? Infinity),
       rate: b.rate
     }));
 
-    console.log("Tax brackets loaded:", brackets);
+    console.log("Brackets loaded:", taxBrackets);
+
+    // Enable button once loaded
+    document.getElementById("calcBtn").disabled = false;
   } catch (err) {
-    console.error("Failed to load tax brackets:", err);
+    console.error("Bracket load failed:", err);
   }
 }
 
-// Auto load brackets once script starts
 loadBrackets();
 
 function formatNaira(num) {
@@ -35,17 +27,12 @@ function formatNaira(num) {
 }
 
 function calculateTax() {
-  if (brackets.length === 0) {
-    document.getElementById("result").innerHTML = "<p>⚠ Tax brackets are still loading. Try again in 2 seconds.</p>";
-    return;
-  }
-
   const income = Number(document.getElementById("income").value);
   const rent = Number(document.getElementById("rent").value);
 
   if (income <= 800000) {
     document.getElementById("result").innerHTML = `
-      <h3>Income is tax-exempt under the 2026 law.</h3>
+      <h3>Income is tax-exempt under 2026 law</h3>
       <p>Total Tax: <strong>₦0.00</strong></p>`;
     return;
   }
@@ -55,31 +42,22 @@ function calculateTax() {
   taxable -= rentRelief;
 
   let tax = 0;
-  let breakdownHTML = `<h3>Tax Breakdown</h3>`;
-  breakdownHTML += `<p>Annual Income: <strong>${formatNaira(income)}</strong></p>`;
-  breakdownHTML += `<p>Rent Paid: <strong>${formatNaira(rent)}</strong></p>`;
-  breakdownHTML += `<p>Rent Relief Applied: <strong>${formatNaira(rentRelief)}</strong></p>`;
-  breakdownHTML += `<p>Taxable Income After Relief: <strong>${formatNaira(Math.max(800000, taxable))}</strong></p><hr>`;
+  let html = `<h3>Tax Breakdown</h3>`;
+  html += `<p>Income: <strong>${formatNaira(income)}</strong></p>`;
+  html += `<p>Rent: <strong>${formatNaira(rent)}</strong></p>`;
+  html += `<p>Relief: <strong>${formatNaira(rentRelief)}</strong></p>`;
+  html += `<p>Taxable: <strong>${formatNaira(Math.max(800000, taxable))}</strong></p><hr>`;
 
-  brackets.forEach(b => {
+  taxBrackets.forEach(b => {
     if (taxable > b.min) {
-      const upper = b.max === Infinity ? taxable : Math.min(taxable, b.max);
+      const upper = Math.min(taxable, b.max);
       const amount = upper - b.min;
       const t = amount * b.rate;
       tax += t;
-      breakdownHTML += `<p>${formatNaira(b.min+1)} – ${b.max === Infinity ? "∞" : formatNaira(b.max)} @ ${(b.rate*100)}% → <strong>${formatNaira(t)}</strong></p>`;
+      html += `<p>${formatNaira(b.min+1)} – ${b.max === Infinity ? "∞" : formatNaira(b.max)} @ ${b.rate*100}% → <strong>${formatNaira(t)}</strong></p>`;
     }
   });
 
-  breakdownHTML += `<hr><p>Total Tax Payable: <strong>${formatNaira(tax)}</strong></p>`;
-
-  document.getElementById("result").innerHTML = breakdownHTML;
+  html += `<hr><p>Total Tax: <strong>${formatNaira(tax)}</strong></p>`;
+  document.getElementById("result").innerHTML = html;
 }
-// Enable button once brackets load
-const checkReady = setInterval(() => {
-  if (brackets.length > 0) {
-    document.getElementById("calcBtn").disabled = false;
-    document.getElementById("calcBtn").removeAttribute("disabled");
-    clearInterval(checkReady);
-  }
-}, 500);
