@@ -79,6 +79,7 @@ function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto
 
 
 function calculateTax(){
+  const result = document.getElementById("result"); 
   const income = Number(document.getElementById("income").value);
   const rent = Number(document.getElementById("rent").value);
   const pension = Number(document.getElementById("pension").value);
@@ -111,8 +112,9 @@ function calculateTax(){
     <p><strong>Total Tax (2026): ${formatNaira(totalTax)}</strong></p><hr>
   `;
 
-  // Monthly breakdown mode
-  document.getElementById("monthly").innerHTML = `
+  // Monthly breakdown
+  const monthly = document.getElementById("monthly");
+  monthly.innerHTML = `
     <h3>Monthly Salary Tax Estimate (2026)</h3>
     <p>Monthly Taxable Income: <strong>${formatNaira(n.monthlyTaxable)}</strong></p>
     <p>Monthly Tax Payable: <strong>${formatNaira(n.monthlyTax)}</strong></p>
@@ -120,6 +122,7 @@ function calculateTax(){
     <button onclick="downloadPDF(${income},${n.taxable},${n.rentRelief},${n.pensionRelief},${n.insuranceRelief},${n.nhisRelief},${n.nhfRelief},${n.cryptoTax},${n.expensesApplied},${totalTax})">Download PDF Report</button>
   `;
 }
+
 
 // PDF Export Function
 async function downloadPDF(income, taxable, rentRelief, pensionRelief, insuranceRelief, nhisRelief, nhfRelief, cryptoTax, expensesApplied, totalTax)
