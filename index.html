@@ -4,44 +4,56 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nigeria Tax Reform 2026 Calculator</title>
+
+    <!-- Your stylesheet -->
     <link rel="stylesheet" href="assets/css/style.css">
+
+    <!-- Optional: jsPDF if you plan to export receipts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
 </head>
-<body>
 
+<body>
     <div class="container">
-        <h1>Nigeria Tax Reform Calculator (Jan 2026)</h1>
+        <h1>Nigeria Tax Reform Calculator (Effective Jan 1, 2026)</h1>
+
+        <!-- Tax bracket table will load here -->
         <div id="bracketTable"></div>
 
+        <!-- Inputs -->
         <label>Annual Income (₦)</label>
-        <input id="income" type="number" placeholder="e.g 1500000">
+        <input id="income" type="number" placeholder="e.g 1,500,000">
 
-        <label>Rent Paid (₦)</label>
-        <input id="rent" type="number" placeholder="e.g 600000">
+        <label>Annual Rent Paid (₦)</label>
+        <input id="rent" type="number" placeholder="e.g 600,000">
 
         <label>Pension Contribution (₦)</label>
-        <input id="pension" type="number" placeholder="e.g 100000">
+        <input id="pension" type="number" placeholder="e.g 100,000">
 
-        <label>Insurance Paid (₦)</label>
-        <input id="insurance" type="number" placeholder="e.g 50000">
+        <label>NHIS Contribution (₦)</label>
+        <input id="nhis" type="number" placeholder="e.g 40,000">
 
-        <label>Crypto Gains/Loss (₦)</label>
-        <input id="crypto" type="number" placeholder="e.g 250000">
+        <label>NHF Contribution (₦)</label>
+        <input id="nhf" type="number" placeholder="e.g 30,000">
 
-        <label>Business Expenses (₦) — Self-Employed</label>
-        <input id="expenses" type="number" placeholder="e.g 300000">
+        <label>Life Insurance Premium Paid (₦)</label>
+        <input id="insurance" type="number" placeholder="e.g 50,000">
 
-       <button id="calcBtn" onclick="calculateTax()" disabled>Calculate Tax</button>
+        <label>Crypto Gains/Losses (₦)</label>
+        <input id="crypto" type="number" placeholder="e.g 250,000">
 
+        <label>Business Expenses (₦) — Self-Employed Only</label>
+        <input id="expenses" type="number" placeholder="e.g 300,000">
 
+        <!-- Calculate Button -->
+        <button id="calcBtn" onclick="calculateTax()" disabled>Calculate Tax</button>
+
+        <!-- Results -->
         <div id="result"></div>
         <div id="monthly"></div>
         <div id="comparison"></div>
-
     </div>
 
+    <!-- Your calculator logic -->
     <script src="assets/js/calculator.js"></script>
 </body>
 </html>
-
