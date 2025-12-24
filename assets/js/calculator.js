@@ -5,7 +5,7 @@ async function loadBrackets() {
     const res = await fetch("docs/tax_brackets_reference.md");
     const text = await res.text();
 
-    const jsonMatch = text.match(/\`\`\`json([\s\S]*?)\`\`\`/);
+    const jsonMatch = text.match(/```json([\s\S]*?)```/);
     if (!jsonMatch) {
       console.error("No JSON bracket data found in reference file.");
       return;
@@ -14,7 +14,7 @@ async function loadBrackets() {
     const jsonString = jsonMatch[1].trim();
     brackets = JSON.parse(jsonString);
 
-    // Convert null max to Infinity
+    // Convert null or missing max to Infinity
     brackets = brackets.map(b => ({
       min: b.min,
       max: b.max === null ? Infinity : (b.max ?? Infinity),
@@ -27,15 +27,19 @@ async function loadBrackets() {
   }
 }
 
-// Auto-load on script start
+// Auto load brackets once script starts
 loadBrackets();
 
-
 function formatNaira(num) {
-  return "₦" + num.toLocaleString("en-NG", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  return "₦" + Number(num).toLocaleString("en-NG", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
 function calculateTax() {
+  if (brackets.length === 0) {
+    document.getElementById("result").innerHTML = "<p>⚠ Tax brackets are still loading. Try again in 2 seconds.</p>";
+    return;
+  }
+
   const income = Number(document.getElementById("income").value);
   const rent = Number(document.getElementById("rent").value);
 
@@ -59,10 +63,11 @@ function calculateTax() {
 
   brackets.forEach(b => {
     if (taxable > b.min) {
-      const taxedAmount = Math.min(taxable, b.max) - b.min;
-      const bracketTax = taxedAmount * b.rate;
-      tax += bracketTax;
-      breakdownHTML += `<p>${formatNaira(b.min+1)} – ${b.max === Infinity ? "∞" : formatNaira(b.max)} @ ${(b.rate*100)}% → <strong>${formatNaira(bracketTax)}</strong></p>`;
+      const upper = b.max === Infinity ? taxable : Math.min(taxable, b.max);
+      const amount = upper - b.min;
+      const t = amount * b.rate;
+      tax += t;
+      breakdownHTML += `<p>${formatNaira(b.min+1)} – ${b.max === Infinity ? "∞" : formatNaira(b.max)} @ ${(b.rate*100)}% → <strong>${formatNaira(t)}</strong></p>`;
     }
   });
 
@@ -70,4 +75,3 @@ function calculateTax() {
 
   document.getElementById("result").innerHTML = breakdownHTML;
 }
-
