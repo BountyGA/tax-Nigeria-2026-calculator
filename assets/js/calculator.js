@@ -1,3 +1,12 @@
+// Load saved inputs on page load
+window.onload = function() {
+  const savedIncome = localStorage.getItem("income");
+  const savedRent = localStorage.getItem("rent");
+
+  if (savedIncome) document.getElementById("income").value = savedIncome;
+  if (savedRent) document.getElementById("rent").value = savedRent;
+};
+
 let taxBrackets = [];
 
 async function loadBrackets() {
@@ -11,12 +20,7 @@ async function loadBrackets() {
       rate: b.rate
     }));
 
-    console.log("Brackets loaded:", taxBrackets);
-
-    // Enable calculate button
     document.getElementById("calcBtn").disabled = false;
-
-    // Render bracket table UI
     renderBracketTable();
   } catch (err) {
     console.error("Bracket load failed:", err);
@@ -30,66 +34,68 @@ function formatNaira(num) {
 }
 
 function renderBracketTable() {
-  const table = document.getElementById("bracketTable");
-  let html = `
+  document.getElementById("bracketTable").innerHTML = `
     <h3>2026 Progressive Tax Brackets</h3>
     <table border="1" style="width:100%; border-collapse:collapse; margin:10px 0;">
-      <tr>
-        <th>Income Range (₦)</th>
-        <th>Rate</th>
-      </tr>
-  `;
-
-  taxBrackets.forEach(b => {
-    html += `
-      <tr>
-        <td>${formatNaira(b.min)} – ${b.max === Infinity ? "∞" : formatNaira(b.max)}</td>
-        <td>${b.rate * 100}%</td>
-      </tr>
-    `;
-  });
-
-  html += `</table><hr>`;
-  table.innerHTML = html;
+      <tr><th>Income Range (₦)</th><th>Rate</th></tr>
+      ${taxBrackets.map(b => `
+        <tr>
+          <td>${formatNaira(b.min)} – ${b.max === Infinity ? "∞" : formatNaira(b.max)}</td>
+          <td>${b.rate * 100}%</td>
+        </tr>`).join("")}
+    </table><hr>`;
 }
 
-function calculateTax() {
-  if (taxBrackets.length === 0) {
-    document.getElementById("result").innerHTML = "<p>⚠ Tax brackets still loading...</p>";
-    return;
-  }
+function calculateOldTax2025(income) {
+  // ⚠ Simplified flat tax model for 2025 comparison demo
+  if (income <= 300000) return 0;
+  return (income - 300000) * 0.07; // 7% above 300k (not official, for comparison demo)
+}
 
-  const income = Number(document.getElementById("income").value);
-  const rent = Number(document.getElementById("rent").value);
-
-  if (income <= 800000) {
-    document.getElementById("result").innerHTML = `
-      <h3>Income is tax-exempt under 2026 law</h3>
-      <p>Total Tax: <strong>₦0.00</strong></p>`;
-    return;
-  }
+function calculateNewTax2026(income, rent) {
+  if (income <= 800000) return 0;
 
   let taxable = income;
   const rentRelief = Math.min(500000, rent * 0.2);
   taxable -= rentRelief;
 
   let tax = 0;
-  let html = `<h3>Tax Breakdown</h3>`;
-  html += `<p>Income: <strong>${formatNaira(income)}</strong></p>`;
-  html += `<p>Rent: <strong>${formatNaira(rent)}</strong></p>`;
-  html += `<p>Rent Relief: <strong>${formatNaira(rentRelief)}</strong></p>`;
-  html += `<p>Taxable Income: <strong>${formatNaira(Math.max(800000, taxable))}</strong></p><hr>`;
-
   taxBrackets.forEach(b => {
     if (taxable > b.min) {
       const upper = Math.min(taxable, b.max);
-      const amount = upper - b.min;
-      const t = amount * b.rate;
-      tax += t;
-      html += `<p>${formatNaira(b.min+1)} – ${b.max === Infinity ? "∞" : formatNaira(b.max)} @ ${b.rate*100}% → <strong>${formatNaira(t)}</strong></p>`;
+      tax += (upper - b.min) * b.rate;
     }
   });
 
-  html += `<hr><p>Total Tax: <strong>${formatNaira(tax)}</strong></p>`;
-  document.getElementById("result").innerHTML = html;
+  return tax;
+}
+
+function calculateTax() {
+  const income = Number(document.getElementById("income").value);
+  const rent = Number(document.getElementById("rent").value);
+
+  if (!income) {
+    document.getElementById("result").innerHTML = "<p>⚠ Enter your income</p>";
+    return;
+  }
+
+  // Save inputs to LocalStorage
+  localStorage.setItem("income", income);
+  localStorage.setItem("rent", rent);
+
+  const oldTax = calculateOldTax2025(income);
+  const newTax = calculateNewTax2026(income, rent);
+
+  document.getElementById("result").innerHTML = `
+    <h3>New 2026 Tax Result</h3>
+    <p>Total Tax: <strong>${formatNaira(newTax)}</strong></p>
+  `;
+
+  document.getElementById("comparison").innerHTML = `
+    <h3>Old vs New Tax Comparison</h3>
+    <p>2025 Estimated Tax: <strong>${formatNaira(oldTax)}</strong></p>
+    <p>2026 Calculated Tax: <strong>${formatNaira(newTax)}</strong></p>
+    <p>You Save: <strong>${formatNaira(Math.max(0, oldTax - newTax))}</strong></p>
+    <p>You Pay More: <strong>${formatNaira(Math.max(0, newTax - oldTax))}</strong></p>
+  `;
 }
