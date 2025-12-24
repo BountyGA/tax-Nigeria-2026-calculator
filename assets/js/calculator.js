@@ -13,8 +13,11 @@ async function loadBrackets() {
 
     console.log("Brackets loaded:", taxBrackets);
 
-    // Enable button once loaded
+    // Enable calculate button
     document.getElementById("calcBtn").disabled = false;
+
+    // Render bracket table UI
+    renderBracketTable();
   } catch (err) {
     console.error("Bracket load failed:", err);
   }
@@ -26,7 +29,36 @@ function formatNaira(num) {
   return "₦" + Number(num).toLocaleString("en-NG", {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
+function renderBracketTable() {
+  const table = document.getElementById("bracketTable");
+  let html = `
+    <h3>2026 Progressive Tax Brackets</h3>
+    <table border="1" style="width:100%; border-collapse:collapse; margin:10px 0;">
+      <tr>
+        <th>Income Range (₦)</th>
+        <th>Rate</th>
+      </tr>
+  `;
+
+  taxBrackets.forEach(b => {
+    html += `
+      <tr>
+        <td>${formatNaira(b.min)} – ${b.max === Infinity ? "∞" : formatNaira(b.max)}</td>
+        <td>${b.rate * 100}%</td>
+      </tr>
+    `;
+  });
+
+  html += `</table><hr>`;
+  table.innerHTML = html;
+}
+
 function calculateTax() {
+  if (taxBrackets.length === 0) {
+    document.getElementById("result").innerHTML = "<p>⚠ Tax brackets still loading...</p>";
+    return;
+  }
+
   const income = Number(document.getElementById("income").value);
   const rent = Number(document.getElementById("rent").value);
 
@@ -45,8 +77,8 @@ function calculateTax() {
   let html = `<h3>Tax Breakdown</h3>`;
   html += `<p>Income: <strong>${formatNaira(income)}</strong></p>`;
   html += `<p>Rent: <strong>${formatNaira(rent)}</strong></p>`;
-  html += `<p>Relief: <strong>${formatNaira(rentRelief)}</strong></p>`;
-  html += `<p>Taxable: <strong>${formatNaira(Math.max(800000, taxable))}</strong></p><hr>`;
+  html += `<p>Rent Relief: <strong>${formatNaira(rentRelief)}</strong></p>`;
+  html += `<p>Taxable Income: <strong>${formatNaira(Math.max(800000, taxable))}</strong></p><hr>`;
 
   taxBrackets.forEach(b => {
     if (taxable > b.min) {
