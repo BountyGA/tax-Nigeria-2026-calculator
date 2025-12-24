@@ -1,10 +1,35 @@
-const brackets = [
-  { min: 800000, max: 2000000, rate: 0.07 },
-  { min: 2000000, max: 5000000, rate: 0.15 },
-  { min: 5000000, max: 10000000, rate: 0.19 },
-  { min: 10000000, max: 50000000, rate: 0.21 },
-  { min: 50000000, max: Infinity, rate: 0.25 }
-];
+let brackets = [];
+
+async function loadBrackets() {
+  try {
+    const res = await fetch("docs/tax_brackets_reference.md");
+    const text = await res.text();
+
+    const jsonMatch = text.match(/\`\`\`json([\s\S]*?)\`\`\`/);
+    if (!jsonMatch) {
+      console.error("No JSON bracket data found in reference file.");
+      return;
+    }
+
+    const jsonString = jsonMatch[1].trim();
+    brackets = JSON.parse(jsonString);
+
+    // Convert null max to Infinity
+    brackets = brackets.map(b => ({
+      min: b.min,
+      max: b.max === null ? Infinity : (b.max ?? Infinity),
+      rate: b.rate
+    }));
+
+    console.log("Tax brackets loaded:", brackets);
+  } catch (err) {
+    console.error("Failed to load tax brackets:", err);
+  }
+}
+
+// Auto-load on script start
+loadBrackets();
+
 
 function formatNaira(num) {
   return "₦" + num.toLocaleString("en-NG", {minimumFractionDigits: 2, maximumFractionDigits: 2});
