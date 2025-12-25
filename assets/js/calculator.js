@@ -1,16 +1,25 @@
 function formatNaira(n){
-  return "₦" + n.toLocaleString("en-NG", {minimumFractionDigits:2, maximumFractionDigits:2});
+  return currencySymbol + " " + n.toLocaleString("en-NG", {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
 let taxBrackets = [];
 let cryptoRate = 0.10;
 let expenseRateCap = 0.30;
+let currencySymbol = "₦";
 
-window.onload = function() {
+window.onload = async function() {
+  const c = localStorage.getItem("currency");
+  if (c) {
+    currencySymbol = c;
+    document.getElementById("currency").value = c;
+  }
+
   ["income","rent","pension","nhis","nhf","insurance","crypto","expenses"].forEach(id => {
     const v = localStorage.getItem(id);
     if (v) document.getElementById(id).value = v;
   });
+
+  await loadBrackets();
 };
 
 async function loadBrackets() {
@@ -29,15 +38,13 @@ async function loadBrackets() {
 
 function renderBracketTable() {
   if (!taxBrackets.length) return;
-  let html = `<h4>2026 Tax Brackets</h4><table class="table table-bordered"><tbody>`;
+  let html = `<h4 class="text-center">2026 Tax Brackets</h4><table class="table table-bordered"><tbody>`;
   taxBrackets.forEach(b => {
     html += `<tr><td>${formatNaira(b.min+1)} – ${b.max === Infinity ? '∞' : formatNaira(b.max)}</td><td>${(b.rate*100).toFixed(2)}%</td></tr>`;
   });
   html += `</tbody></table>`;
   document.getElementById("bracketTable").innerHTML = html;
 }
-
-loadBrackets();
 
 function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, cryptoGain, expenses) {
   const rentRelief = Math.min(500000, rent * 0.2);
@@ -58,63 +65,35 @@ function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto
 
 function calculateTax(){
   const income = Number(document.getElementById("income").value);
+  const rent = Number(document.getElementById("rent").value);
+  const pension = Number(document.getElementById("pension").value);
+  const nhis = Number(document.getElementById("nhis").value);
+  const nhf  = Number(document.getElementById("nhf").value);
+  const insurance = Number(document.getElementById("insurance").value);
+  const cryptoGain = Number(document.getElementById("crypto").value);
+  const expenses = Number(document.getElementById("expenses").value);
+
   const result = document.getElementById("result");
 
   if (income <= 0) {
-    result.innerHTML = `<div class="alert alert-danger">⚠ Enter valid income</div>`;
+    result.innerHTML = `<div class="alert alert-danger text-center">⚠ Please enter a valid income</div>`;
     return;
   }
 
-  const n = calculateNewTax2026(
-    income,
-    Number(document.getElementById("rent").value),
-    Number(document.getElementById("pension").value),
-    Number(document.getElementById("nhis").value),
-    Number(document.getElementById("nhf").value),
-    Number(document.getElementById("insurance").value),
-    Number(document.getElementById("crypto").value),
-    Number(document.getElementById("expenses").value)
-  );
-
+  const n = calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, cryptoGain, expenses);
   const totalTax = n.tax + n.cryptoTax;
 
-  result.innerHTML = `
-    <div class="card shadow p-3">
-      <h3 class="text-center text-primary">2026 Tax Report</h3>
-      <p><strong>Income:</strong> ${formatNaira(income)}</p>
-      <p><strong>Taxable:</strong> ${formatNaira(n.taxable)}</p>
-      <p><strong>Expenses Relief:</strong> ${formatNaira(n.expensesApplied)}</p>
-      <p><strong>Rent Relief:</strong> ${formatNaira(n.rentRelief)}</p>
-      <p><strong>Pension Relief:</strong> ${formatNaira(n.pensionRelief)}</p>
-      <p><strong>Insurance Relief:</strong> ${formatNaira(n.insuranceRelief)}</p>
-      <p><strong>Crypto Tax:</strong> ${formatNaira(n.cryptoTax)}</p>
-      <hr>
-      <h4 class="text-center text-success">Total Tax: ${formatNaira(totalTax)}</h4>
-    </div>
-  `;
+  readOutLoud(n, income, totalTax);
 
-  document.getElementById("monthly").innerHTML = `
-    <div class="card shadow p-3 mt-3">
-      <h3 class="text-center">Monthly Estimate</h3>
-      <p><strong>Taxable/Month:</strong> ${formatNaira(n.monthlyTaxable)}</p>
-      <p><strong>Tax/Month:</strong> ${formatNaira(n.monthlyTax)}</p>
-      <p><strong>Take-Home:</strong> ${formatNaira((income/12) - n.monthlyTax)}</p>
-      <div class="text-center">
-        <button class="btn btn-success mt-2"
-          onclick="downloadPDF(${income},${n.taxable},${n.rentRelief},${n.pensionRelief},${n.insuranceRelief},${n.cryptoTax},${n.expensesApplied},${totalTax})">
-          Download PDF Report
-        </button>
-      </div>
-    </div>
-  `;
-
-  ["income","rent","pension","nhis","nhf","insurance","crypto","expenses"].forEach(id =>
-    localStorage.setItem(id, document.getElementById(id).value)
-  );
+  result.innerHTML = `<div class="alert alert-success text-center"><h4>Total Tax Payable: ${formatNaira(totalTax)}</h4></div>`;
 }
 
-function downloadPDF(...args){
-  const doc = new window.jspdf.jsPDF();
-  doc.text("Nigeria 2026 Tax Report Ready", 10, 10);
-  doc.save("Nigeria_Tax_2026_Report.pdf");
+function setMode(mode){
+  const box = document.getElementById("advancedFields");
+  if (mode === "simple") {
+    box.style.display = "none";
+  } else {
+    box.style.display = "block";
+  }
+  localStorage.setItem("mode", mode);
 }
