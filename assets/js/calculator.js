@@ -465,7 +465,7 @@ function downloadPDF() {
         // Get current tax results
         const resultDiv = document.getElementById('result');
         if (!resultDiv || !resultDiv.innerHTML.trim()) {
-            alert("Please calculate your tax first before downloading the report.");
+            showNotification("Please calculate your tax first before downloading the report.", "warning");
             return;
         }
         
@@ -776,7 +776,7 @@ function downloadPDF() {
 function shareWhatsApp() {
     const income = document.getElementById('income')?.value;
     if (!income || parseFloat(income) <= 0) {
-        alert("Please calculate your tax first before sharing.");
+       showNotification("Please calculate your tax first before sharing.", "warning");
         return;
     }
     
@@ -895,3 +895,5 @@ window.downloadPDF = downloadPDF;
 window.shareWhatsApp = shareWhatsApp;
 window.fillSampleData = fillSampleData;
 window.showNotification = showNotification;
+
+
