@@ -462,22 +462,314 @@ function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
+        // Get current tax results
+        const resultDiv = document.getElementById('result');
+        if (!resultDiv || !resultDiv.innerHTML.trim()) {
+            alert("Please calculate your tax first before downloading the report.");
+            return;
+        }
+        
+        // Get all input values
+        const getValue = (id) => {
+            const el = document.getElementById(id);
+            return el ? parseFloat(el.value) || 0 : 0;
+        };
+        
+        const income = getValue('income');
+        const rent = getValue('rent');
+        const pension = getValue('pension');
+        const nhis = getValue('nhis');
+        const nhf = getValue('nhf');
+        const insurance = getValue('insurance');
+        const crypto = getValue('crypto');
+        const expenses = getValue('expenses');
+        
+        // Recalculate to get all data (or use stored results if available)
+        const result = calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses);
+        
+        // PDF Styling
+        const primaryColor = [42, 92, 154]; // #2a5c9a
+        const secondaryColor = [30, 132, 73]; // #1e8449
+        const textColor = [50, 50, 50];
+        const lightColor = [240, 240, 240];
+        
+        // Add header with logo placeholder
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 30, 'F');
+        
+        doc.setTextColor(255, 255, 255);
         doc.setFontSize(20);
-        doc.text("Nigeria 2026 Tax Report", 20, 20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('NTAX 2026', 105, 20, { align: 'center' });
+        
+        doc.setFontSize(10);
+        doc.text('Nigeria Tax Reform Calculator', 105, 27, { align: 'center' });
+        
+        // Add date
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(9);
+        doc.text(`Generated: ${new Date().toLocaleDateString('en-NG', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        })}`, 105, 35, { align: 'center' });
+        
+        // Personal Information
+        doc.setTextColor(...textColor);
         doc.setFontSize(12);
-        doc.text("Generated on: " + new Date().toLocaleDateString(), 20, 30);
+        doc.setFont('helvetica', 'bold');
+        doc.text('TAX CALCULATION REPORT', 105, 50, { align: 'center' });
         
-        // Get income value
-        const income = document.getElementById('income')?.value || '0';
-        doc.text(`Annual Income: ${currencySymbol} ${parseFloat(income).toLocaleString()}`, 20, 50);
+        // Income Section
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ANNUAL INCOME', 20, 65);
         
-        doc.save("Nigeria_Tax_2026_Report.pdf");
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${currencySymbol} ${income.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 65, { align: 'right' });
         
-        alert("PDF downloaded successfully!");
+        // Tax Summary
+        doc.setFillColor(...lightColor);
+        doc.rect(20, 75, 170, 60, 'F');
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(12);
+        doc.setTextColor(...primaryColor);
+        doc.text('TAX SUMMARY', 25, 85);
+        
+        // Taxable Income
+        doc.setFontSize(10);
+        doc.setTextColor(...textColor);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Taxable Income:', 25, 95);
+        doc.text(`${currencySymbol} ${result.taxable.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 95, { align: 'right' });
+        
+        // Total Tax Due
+        doc.setFont('helvetica', 'bold');
+        doc.text('Total Tax Due:', 25, 105);
+        doc.setTextColor(...secondaryColor);
+        doc.text(`${currencySymbol} ${result.totalTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 105, { align: 'right' });
+        
+        // Effective Tax Rate
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...textColor);
+        doc.text('Effective Tax Rate:', 25, 115);
+        doc.text(`${result.effectiveRate.toFixed(2)}%`, 180, 115, { align: 'right' });
+        
+        // Monthly Breakdown
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text('MONTHLY BREAKDOWN', 25, 125);
+        
+        // Monthly values
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...textColor);
+        doc.text('Monthly Taxable:', 25, 135);
+        doc.text(`${currencySymbol} ${result.monthlyTaxable.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 135, { align: 'right' });
+        
+        doc.text('Monthly Tax:', 25, 142);
+        doc.text(`${currencySymbol} ${result.monthlyTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 142, { align: 'right' });
+        
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...secondaryColor);
+        doc.text('Monthly Take Home:', 25, 149);
+        doc.text(`${currencySymbol} ${result.monthlyTakeHome.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 149, { align: 'right' });
+        
+        // Deductions Section (Page 2)
+        doc.addPage();
+        
+        // Deductions Header
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 30, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DEDUCTIONS BREAKDOWN', 105, 20, { align: 'center' });
+        
+        // Deductions Table
+        doc.setTextColor(...textColor);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('DEDUCTION TYPE', 25, 45);
+        doc.text('AMOUNT', 180, 45, { align: 'right' });
+        
+        // Line
+        doc.setDrawColor(200, 200, 200);
+        doc.line(25, 48, 185, 48);
+        
+        let yPos = 55;
+        
+        // Rent Relief
+        doc.setFont('helvetica', 'normal');
+        doc.text('Rent Relief (20%):', 25, yPos);
+        doc.text(`${currencySymbol} ${result.rentRelief.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
+        yPos += 8;
+        
+        // Pension Relief
+        doc.text('Pension Contribution:', 25, yPos);
+        doc.text(`${currencySymbol} ${result.pensionRelief.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
+        yPos += 8;
+        
+        // Insurance Relief
+        doc.text('Insurance Premium:', 25, yPos);
+        doc.text(`${currencySymbol} ${result.insuranceRelief.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
+        yPos += 8;
+        
+        // NHIS
+        doc.text('NHIS Contribution:', 25, yPos);
+        doc.text(`${currencySymbol} ${result.nhis.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
+        yPos += 8;
+        
+        // NHF
+        doc.text('NHF Contribution:', 25, yPos);
+        doc.text(`${currencySymbol} ${result.nhf.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
+        yPos += 8;
+        
+        // Business Expenses
+        doc.text('Business Expenses:', 25, yPos);
+        doc.text(`${currencySymbol} ${result.expensesApplied.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
+        yPos += 8;
+        
+        // Crypto Tax
+        if (result.cryptoTax > 0) {
+            doc.text('Crypto Gains Tax (10%):', 25, yPos);
+            doc.text(`${currencySymbol} ${result.cryptoTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
+            yPos += 8;
+        }
+        
+        // Total Reliefs
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...primaryColor);
+        doc.text('TOTAL RELIEFS & DEDUCTIONS:', 25, yPos + 5);
+        doc.text(`${currencySymbol} ${result.totalReliefs.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos + 5, { align: 'right' });
+        
+        // Tax Brackets (Page 3)
+        doc.addPage();
+        
+        // Brackets Header
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, 0, 210, 30, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.text('2026 TAX BRACKETS', 105, 20, { align: 'center' });
+        
+        // Brackets Table
+        doc.setTextColor(...textColor);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        
+        // Table Headers
+        doc.text('INCOME RANGE', 25, 45);
+        doc.text('RATE', 150, 45);
+        doc.text('TAX', 180, 45, { align: 'right' });
+        
+        // Line
+        doc.line(25, 48, 185, 48);
+        
+        yPos = 55;
+        
+        // Display brackets
+        taxBrackets.forEach((bracket, index) => {
+            const maxDisplay = bracket.max === Infinity ? 'and above' : 
+                `${currencySymbol} ${bracket.max.toLocaleString('en-NG', {minimumFractionDigits: 2})}`;
+            
+            doc.setFont('helvetica', 'normal');
+            doc.text(`${currencySymbol} ${bracket.min.toLocaleString('en-NG', {minimumFractionDigits: 2})} - ${maxDisplay}`, 25, yPos);
+            doc.text(`${(bracket.rate * 100).toFixed(1)}%`, 150, yPos);
+            
+            // Calculate example tax for this bracket
+            const exampleIncome = bracket.max === Infinity ? 
+                Math.max(bracket.min * 2, 10000000) : 
+                (bracket.min + bracket.max) / 2;
+            
+            let exampleTax = 0;
+            let remaining = exampleIncome;
+            
+            for (const b of taxBrackets) {
+                if (remaining > b.min) {
+                    const amountInBracket = Math.min(remaining, b.max) - b.min;
+                    if (amountInBracket > 0) {
+                        exampleTax += amountInBracket * b.rate;
+                    }
+                }
+            }
+            
+            doc.text(`${currencySymbol} ${exampleTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
+            
+            yPos += 7;
+        });
+        
+        // Disclaimer Section
+        doc.addPage();
+        
+        doc.setFillColor(245, 245, 245);
+        doc.rect(10, 10, 190, 277, 'F');
+        
+        doc.setTextColor(100, 100, 100);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('IMPORTANT DISCLAIMER', 105, 50, { align: 'center' });
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const disclaimer = [
+            'This tax calculation report is provided for informational purposes only.',
+            'It is based on the proposed Nigeria Tax Reform 2026 legislation and',
+            'should not be considered as professional tax advice.',
+            '',
+            'Key Points to Note:',
+            '• Minimum taxable income: ₦800,000',
+            '• Rent relief: 20% of rent paid or ₦500,000 maximum',
+            '• Pension relief: ₦200,000 maximum',
+            '• Insurance relief: ₦100,000 maximum',
+            '• Business expenses: Maximum of 30% of income',
+            '• Crypto gains tax: 10% on profits only',
+            '• NHIS & NHF contributions are fully deductible',
+            '',
+            'The actual tax liability may vary based on:',
+            '• Final legislation passed by the National Assembly',
+            '• Individual circumstances and documentation',
+            '• FIRS guidelines and interpretations',
+            '• State-level taxes and levies',
+            '',
+            'For official tax advice and filing, please consult:',
+            '• A certified tax professional',
+            '• Federal Inland Revenue Service (FIRS)',
+            '• State Internal Revenue Service',
+            '',
+            'Generated by NTAX 2026 Calculator',
+            'https://your-website-url.com'
+        ];
+        
+        let disclaimerY = 80;
+        disclaimer.forEach(line => {
+            if (line.startsWith('•')) {
+                doc.text('  ' + line, 30, disclaimerY);
+            } else if (line.includes(':')) {
+                doc.setFont('helvetica', 'bold');
+                doc.text(line, 105, disclaimerY, { align: 'center' });
+                doc.setFont('helvetica', 'normal');
+            } else {
+                doc.text(line, 105, disclaimerY, { align: 'center' });
+            }
+            disclaimerY += 7;
+        });
+        
+        // Save PDF
+        const fileName = `Nigeria_Tax_2026_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        doc.save(fileName);
+        
+        showNotification('Comprehensive PDF report downloaded successfully!', 'success');
         
     } catch (error) {
-        alert("Could not generate PDF. Please try again.");
-        console.error("PDF error:", error);
+        console.error('PDF generation error:', error);
+        showNotification('Unable to generate PDF. Please try again.', 'warning');
     }
 }
 
@@ -493,6 +785,8 @@ function shareWhatsApp() {
     window.open(url, '_blank');
 }
 
+// ... [all your existing code above] ...
+
 function fillSampleData() {
     // Clear first
     clearInputs();
@@ -507,10 +801,92 @@ function fillSampleData() {
     document.getElementById('crypto').value = '100000';
     document.getElementById('expenses').value = '600000';
     
-    alert("Sample data loaded. Click 'Calculate Tax' to see results.");
+    // Use showNotification instead of alert
+    showNotification('Sample data loaded. Click "Calculate Tax" to see results.', 'info');
 }
 
-// Make functions globally available
+// ============================================
+// NOTIFICATION FUNCTION - ADD THIS AT THE BOTTOM
+// ============================================
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    
+    // Set styles based on type
+    let bgColor, textColor, icon;
+    
+    switch(type) {
+        case 'success':
+            bgColor = 'bg-success';
+            textColor = 'text-white';
+            icon = 'check-circle-fill';
+            break;
+        case 'warning':
+            bgColor = 'bg-warning';
+            textColor = 'text-dark';
+            icon = 'exclamation-triangle-fill';
+            break;
+        case 'error':
+        case 'danger':
+            bgColor = 'bg-danger';
+            textColor = 'text-white';
+            icon = 'exclamation-octagon-fill';
+            break;
+        default: // info
+            bgColor = 'bg-info';
+            textColor = 'text-white';
+            icon = 'info-circle-fill';
+    }
+    
+    notification.className = `toast ${bgColor} ${textColor} border-0`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        border-radius: 8px;
+        overflow: hidden;
+    `;
+    
+    notification.innerHTML = `
+        <div class="toast-header ${bgColor} ${textColor} border-0">
+            <i class="bi bi-${icon} me-2"></i>
+            <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body ${textColor}" style="background-color: inherit;">
+            ${message}
+        </div>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Initialize as Bootstrap toast
+    const toast = new bootstrap.Toast(notification, {
+        animation: true,
+        autohide: true,
+        delay: 5000
+    });
+    
+    toast.show();
+    
+    // Remove from DOM after hiding
+    notification.addEventListener('hidden.bs.toast', function() {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    });
+}
+
+// ============================================
+// MAKE ALL FUNCTIONS GLOBALLY AVAILABLE
+// ============================================
+
 window.calculateTax = calculateTax;
 window.clearInputs = clearInputs;
 window.setMode = setMode;
@@ -518,3 +894,4 @@ window.updateCurrency = updateCurrency;
 window.downloadPDF = downloadPDF;
 window.shareWhatsApp = shareWhatsApp;
 window.fillSampleData = fillSampleData;
+window.showNotification = showNotification;
