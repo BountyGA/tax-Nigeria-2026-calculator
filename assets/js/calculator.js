@@ -493,19 +493,118 @@ function downloadPDF() {
         const textColor = [50, 50, 50];
         const lightColor = [240, 240, 240];
         
-        // Add header with logo placeholder
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, 210, 30, 'F');
+        // ============================================
+        // LOGO HANDLING - Add your logo to PDF
+        // ============================================
         
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
-        doc.setFont('helvetica', 'bold');
-        doc.text('NTAX 2026', 105, 20, { align: 'center' });
+        // Try to load logo from your assets folder
+        const loadLogo = () => {
+            return new Promise((resolve) => {
+                try {
+                    // Create an image element
+                    const img = new Image();
+                    img.crossOrigin = 'Anonymous'; // Handle CORS if needed
+                    
+                    // Try to load the logo
+                    img.src = 'assets/img/webmasLogo.png';
+                    
+                    img.onload = function() {
+                        // Create a canvas to convert the image
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // Set canvas dimensions to match image
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        
+                        // Draw image on canvas
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Get image data URL
+                        const imgData = canvas.toDataURL('image/png');
+                        resolve(imgData);
+                    };
+                    
+                    img.onerror = function() {
+                        console.log("Logo not found or couldn't be loaded");
+                        resolve(null);
+                    };
+                    
+                } catch (error) {
+                    console.log("Error loading logo:", error);
+                    resolve(null);
+                }
+            });
+        };
         
-        doc.setFontSize(10);
-        doc.text('Nigeria Tax Reform Calculator', 105, 27, { align: 'center' });
+        // Function to add logo to PDF
+        const addLogoToPDF = async () => {
+            try {
+                const logoData = await loadLogo();
+                
+                if (logoData) {
+                    // Add logo to the top-left corner
+                    doc.addImage(logoData, 'PNG', 15, 8, 30, 30);
+                    
+                    // Add company name next to logo
+                    doc.setTextColor(...primaryColor);
+                    doc.setFontSize(16);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('NTAX 2026', 50, 20);
+                    
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Nigeria Tax Reform Calculator', 50, 27);
+                    
+                    return 45; // Return the Y position after logo section
+                } else {
+                    // Fallback: Create a simple logo placeholder
+                    doc.setFillColor(...primaryColor);
+                    doc.rect(15, 8, 30, 30, 'F');
+                    
+                    doc.setTextColor(255, 255, 255);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('NT', 30, 25, { align: 'center' });
+                    
+                    // Add company name
+                    doc.setTextColor(...primaryColor);
+                    doc.setFontSize(16);
+                    doc.text('NTAX 2026', 50, 20);
+                    
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Nigeria Tax Reform Calculator', 50, 27);
+                    
+                    return 45;
+                }
+            } catch (error) {
+                console.log("Could not add logo:", error);
+                
+                // Simple header without logo
+                doc.setFillColor(...primaryColor);
+                doc.rect(0, 0, 210, 30, 'F');
+                
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(20);
+                doc.setFont('helvetica', 'bold');
+                doc.text('NTAX 2026', 105, 20, { align: 'center' });
+                
+                doc.setFontSize(10);
+                doc.text('Nigeria Tax Reform Calculator', 105, 27, { align: 'center' });
+                
+                return 35;
+            }
+        };
         
-        // Add date
+        // ============================================
+        // BUILD THE PDF WITH LOGO
+        // ============================================
+        
+        // Add logo and get starting Y position
+        const startY = await addLogoToPDF();
+        
+        // Add date below logo/header
         doc.setTextColor(150, 150, 150);
         doc.setFontSize(9);
         doc.text(`Generated: ${new Date().toLocaleDateString('en-NG', {
@@ -514,93 +613,98 @@ function downloadPDF() {
             day: 'numeric',
             hour: '2-digit',
             minute: '2-digit'
-        })}`, 105, 35, { align: 'center' });
+        })}`, 105, startY + 5, { align: 'center' });
         
         // Personal Information
         doc.setTextColor(...textColor);
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('TAX CALCULATION REPORT', 105, 50, { align: 'center' });
+        doc.text('TAX CALCULATION REPORT', 105, startY + 20, { align: 'center' });
         
         // Income Section
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.text('ANNUAL INCOME', 20, 65);
+        doc.text('ANNUAL INCOME', 20, startY + 35);
         
         doc.setFont('helvetica', 'normal');
-        doc.text(`${currencySymbol} ${income.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 65, { align: 'right' });
+        doc.text(`${currencySymbol} ${income.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 35, { align: 'right' });
         
-        // Tax Summary
+        // Tax Summary Box
         doc.setFillColor(...lightColor);
-        doc.rect(20, 75, 170, 60, 'F');
+        doc.rect(20, startY + 45, 170, 60, 'F');
         
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(12);
         doc.setTextColor(...primaryColor);
-        doc.text('TAX SUMMARY', 25, 85);
+        doc.text('TAX SUMMARY', 25, startY + 55);
         
         // Taxable Income
         doc.setFontSize(10);
         doc.setTextColor(...textColor);
         doc.setFont('helvetica', 'normal');
-        doc.text('Taxable Income:', 25, 95);
-        doc.text(`${currencySymbol} ${result.taxable.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 95, { align: 'right' });
+        doc.text('Taxable Income:', 25, startY + 65);
+        doc.text(`${currencySymbol} ${result.taxable.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 65, { align: 'right' });
         
         // Total Tax Due
         doc.setFont('helvetica', 'bold');
-        doc.text('Total Tax Due:', 25, 105);
+        doc.text('Total Tax Due:', 25, startY + 75);
         doc.setTextColor(...secondaryColor);
-        doc.text(`${currencySymbol} ${result.totalTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 105, { align: 'right' });
+        doc.text(`${currencySymbol} ${result.totalTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 75, { align: 'right' });
         
         // Effective Tax Rate
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...textColor);
-        doc.text('Effective Tax Rate:', 25, 115);
-        doc.text(`${result.effectiveRate.toFixed(2)}%`, 180, 115, { align: 'right' });
+        doc.text('Effective Tax Rate:', 25, startY + 85);
+        doc.text(`${result.effectiveRate.toFixed(2)}%`, 180, startY + 85, { align: 'right' });
         
         // Monthly Breakdown
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...primaryColor);
-        doc.text('MONTHLY BREAKDOWN', 25, 125);
+        doc.text('MONTHLY BREAKDOWN', 25, startY + 95);
         
         // Monthly values
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...textColor);
-        doc.text('Monthly Taxable:', 25, 135);
-        doc.text(`${currencySymbol} ${result.monthlyTaxable.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 135, { align: 'right' });
+        doc.text('Monthly Taxable:', 25, startY + 105);
+        doc.text(`${currencySymbol} ${result.monthlyTaxable.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 105, { align: 'right' });
         
-        doc.text('Monthly Tax:', 25, 142);
-        doc.text(`${currencySymbol} ${result.monthlyTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 142, { align: 'right' });
+        doc.text('Monthly Tax:', 25, startY + 112);
+        doc.text(`${currencySymbol} ${result.monthlyTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 112, { align: 'right' });
         
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...secondaryColor);
-        doc.text('Monthly Take Home:', 25, 149);
-        doc.text(`${currencySymbol} ${result.monthlyTakeHome.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, 149, { align: 'right' });
+        doc.text('Monthly Take Home:', 25, startY + 119);
+        doc.text(`${currencySymbol} ${result.monthlyTakeHome.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 119, { align: 'right' });
         
-        // Deductions Section (Page 2)
+        // ============================================
+        // PAGE 2: DEDUCTIONS (with logo on header)
+        // ============================================
         doc.addPage();
         
-        // Deductions Header
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, 210, 30, 'F');
+        // Add logo to page 2 header
+        await addLogoToPDF();
         
+        // Deductions Header
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, startY - 10, 210, 20, 'F');
+        
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('DEDUCTIONS BREAKDOWN', 105, 20, { align: 'center' });
+        doc.text('DEDUCTIONS BREAKDOWN', 105, startY, { align: 'center' });
         
         // Deductions Table
         doc.setTextColor(...textColor);
         doc.setFontSize(11);
         doc.setFont('helvetica', 'bold');
-        doc.text('DEDUCTION TYPE', 25, 45);
-        doc.text('AMOUNT', 180, 45, { align: 'right' });
+        doc.text('DEDUCTION TYPE', 25, startY + 25);
+        doc.text('AMOUNT', 180, startY + 25, { align: 'right' });
         
         // Line
         doc.setDrawColor(200, 200, 200);
-        doc.line(25, 48, 185, 48);
+        doc.line(25, startY + 28, 185, startY + 28);
         
-        let yPos = 55;
+        let yPos = startY + 35;
         
         // Rent Relief
         doc.setFont('helvetica', 'normal');
@@ -646,17 +750,22 @@ function downloadPDF() {
         doc.text('TOTAL RELIEFS & DEDUCTIONS:', 25, yPos + 5);
         doc.text(`${currencySymbol} ${result.totalReliefs.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos + 5, { align: 'right' });
         
-        // Tax Brackets (Page 3)
+        // ============================================
+        // PAGE 3: TAX BRACKETS (with logo on header)
+        // ============================================
         doc.addPage();
         
-        // Brackets Header
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, 0, 210, 30, 'F');
+        // Add logo to page 3 header
+        await addLogoToPDF();
         
+        // Brackets Header
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(20);
+        doc.setFillColor(...primaryColor);
+        doc.rect(0, startY - 10, 210, 20, 'F');
+        
+        doc.setFontSize(16);
         doc.setFont('helvetica', 'bold');
-        doc.text('2026 TAX BRACKETS', 105, 20, { align: 'center' });
+        doc.text('2026 TAX BRACKETS', 105, startY, { align: 'center' });
         
         // Brackets Table
         doc.setTextColor(...textColor);
@@ -664,14 +773,14 @@ function downloadPDF() {
         doc.setFont('helvetica', 'bold');
         
         // Table Headers
-        doc.text('INCOME RANGE', 25, 45);
-        doc.text('RATE', 150, 45);
-        doc.text('TAX', 180, 45, { align: 'right' });
+        doc.text('INCOME RANGE', 25, startY + 25);
+        doc.text('RATE', 150, startY + 25);
+        doc.text('EXAMPLE TAX', 180, startY + 25, { align: 'right' });
         
         // Line
-        doc.line(25, 48, 185, 48);
+        doc.line(25, startY + 28, 185, startY + 28);
         
-        yPos = 55;
+        yPos = startY + 35;
         
         // Display brackets
         taxBrackets.forEach((bracket, index) => {
@@ -704,16 +813,22 @@ function downloadPDF() {
             yPos += 7;
         });
         
-        // Disclaimer Section
+        // ============================================
+        // PAGE 4: DISCLAIMER (with logo on header)
+        // ============================================
         doc.addPage();
         
+        // Add logo to page 4 header
+        await addLogoToPDF();
+        
+        // Disclaimer Section
         doc.setFillColor(245, 245, 245);
-        doc.rect(10, 10, 190, 277, 'F');
+        doc.rect(10, startY + 10, 190, 180, 'F');
         
         doc.setTextColor(100, 100, 100);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.text('IMPORTANT DISCLAIMER', 105, 50, { align: 'center' });
+        doc.text('IMPORTANT DISCLAIMER', 105, startY + 40, { align: 'center' });
         
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
@@ -747,7 +862,7 @@ function downloadPDF() {
             'https://your-website-url.com'
         ];
         
-        let disclaimerY = 80;
+        let disclaimerY = startY + 60;
         disclaimer.forEach(line => {
             if (line.startsWith('•')) {
                 doc.text('  ' + line, 30, disclaimerY);
@@ -760,6 +875,29 @@ function downloadPDF() {
             }
             disclaimerY += 7;
         });
+        
+        // Add logo at the bottom of disclaimer page
+        try {
+            const logoData = await loadLogo();
+            if (logoData) {
+                doc.addImage(logoData, 'PNG', 85, disclaimerY + 20, 40, 40);
+            }
+        } catch (error) {
+            // If logo fails, add text version
+            doc.setFillColor(...primaryColor);
+            doc.rect(85, disclaimerY + 20, 40, 40, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(18);
+            doc.setFont('helvetica', 'bold');
+            doc.text('NT', 105, disclaimerY + 40, { align: 'center' });
+        }
+        
+        // Add footer with your website
+        doc.setTextColor(150, 150, 150);
+        doc.setFontSize(8);
+        doc.text('© 2024 NTAX Calculator. All rights reserved.', 105, 280, { align: 'center' });
+        doc.text('www.yourwebsite.com | contact@yourwebsite.com', 105, 285, { align: 'center' });
         
         // Save PDF
         const fileName = `Nigeria_Tax_2026_Report_${new Date().toISOString().split('T')[0]}.pdf`;
