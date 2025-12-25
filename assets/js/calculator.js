@@ -18,6 +18,10 @@ let currentMode = "advanced";
 
 // Enhanced currency formatting with accessibility
 function formatCurrency(amount) {
+    if (isNaN(amount) || amount === null || amount === undefined) {
+        return `${currencySymbol} 0.00`;
+    }
+    
     const formatted = currencySymbol === "₦" 
         ? amount.toLocaleString("en-NG", {
             minimumFractionDigits: 2,
@@ -28,11 +32,15 @@ function formatCurrency(amount) {
             maximumFractionDigits: 2
         });
     
-    return `<span class="currency-amount" aria-label="${amount} ${currencySymbol === '₦' ? 'Naira' : currencySymbol}">${currencySymbol} ${formatted}</span>`;
+    return `<span class="currency-amount">${currencySymbol} ${formatted}</span>`;
 }
 
 // Format for speech output (no HTML)
 function formatCurrencyForSpeech(amount) {
+    if (isNaN(amount) || amount === null || amount === undefined) {
+        return `${currencySymbol} 0.00`;
+    }
+    
     const formatted = amount.toLocaleString("en-NG", {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
@@ -84,7 +92,7 @@ function loadPreferences() {
     fields.forEach(id => {
         try {
             const savedValue = localStorage.getItem(id);
-            if (savedValue !== null && savedValue !== undefined) {
+            if (savedValue !== null && savedValue !== undefined && savedValue !== '') {
                 const field = document.getElementById(id);
                 if (field) {
                     field.value = savedValue;
@@ -100,43 +108,41 @@ function setupInputValidation() {
     // Add input event listeners for real-time validation
     const numberFields = document.querySelectorAll('input[type="number"]');
     numberFields.forEach(field => {
+        // Save value on input
         field.addEventListener('input', function(e) {
-            // Remove any non-numeric characters except decimal point
-            this.value = this.value.replace(/[^\d.]/g, '');
-            
-            // Ensure only one decimal point
-            const parts = this.value.split('.');
-            if (parts.length > 2) {
-                this.value = parts[0] + '.' + parts.slice(1).join('');
-            }
-            
-            // Limit to 2 decimal places
-            if (parts.length === 2 && parts[1].length > 2) {
-                this.value = parts[0] + '.' + parts[1].substring(0, 2);
-            }
+            // Store the raw value for calculation
+            const rawValue = this.value.replace(/,/g, '');
             
             // Highlight required field
-            if (this.id === 'income' && this.value) {
+            if (this.id === 'income' && rawValue) {
                 this.classList.add('is-valid');
+                this.classList.remove('is-invalid');
             }
+            
+            // Save to localStorage for persistence
+            localStorage.setItem(this.id, rawValue);
         });
         
+        // Format on blur for display
         field.addEventListener('blur', function() {
-            if (this.value && !isNaN(this.value)) {
+            const rawValue = this.value.replace(/,/g, '');
+            const num = parseFloat(rawValue);
+            
+            if (!isNaN(num) && rawValue !== '') {
                 // Format with commas for readability
-                const num = parseFloat(this.value);
-                if (!isNaN(num)) {
-                    this.value = num.toLocaleString('en-US', {
-                        maximumFractionDigits: 2,
-                        minimumFractionDigits: 0
-                    });
-                }
+                this.value = num.toLocaleString('en-US', {
+                    maximumFractionDigits: 0,
+                    minimumFractionDigits: 0
+                });
             }
         });
         
         field.addEventListener('focus', function() {
-            // Remove commas for editing
-            this.value = this.value.replace(/,/g, '');
+            // Remove commas for editing but keep the numeric value
+            const rawValue = this.value.replace(/,/g, '');
+            if (rawValue !== '') {
+                this.value = rawValue;
+            }
         });
     });
 }
@@ -219,7 +225,7 @@ function renderBracketTable() {
                             <tr>
                                 <th class="ps-4">Income Range</th>
                                 <th class="text-center">Tax Rate</th>
-                                <th class="text-center pe-4">Annual Tax</th>
+                                <th class="text-center pe-4">Example Tax</th>
                             </tr>
                         </thead>
                         <tbody>`;
@@ -251,8 +257,8 @@ function renderBracketTable() {
                     </span>
                 </td>
                 <td class="text-center align-middle pe-4">
-                    <div class="text-success fw-medium">${formatCurrency(exampleTax).replace(/<[^>]*>/g, '')}</div>
-                    <small class="text-muted">on ${formatCurrency(exampleIncome).replace(/<[^>]*>/g, '')}</small>
+                    <div class="text-success fw-medium">${formatCurrency(exampleTax)}</div>
+                    <small class="text-muted">on ${formatCurrency(exampleIncome)}</small>
                 </td>
             </tr>`;
     });
@@ -336,15 +342,15 @@ function showErrorToUser(context, message) {
 }
 
 function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, cryptoGain, expenses) {
-    // Validate inputs
-    income = Math.max(0, Number(income) || 0);
-    rent = Math.max(0, Number(rent) || 0);
-    pension = Math.max(0, Number(pension) || 0);
-    nhis = Math.max(0, Number(nhis) || 0);
-    nhf = Math.max(0, Number(nhf) || 0);
-    insurance = Math.max(0, Number(insurance) || 0);
-    cryptoGain = Math.max(0, Number(cryptoGain) || 0);
-    expenses = Math.max(0, Number(expenses) || 0);
+    // Validate inputs - remove commas and parse
+    income = Math.max(0, parseFloat(income.toString().replace(/,/g, '')) || 0);
+    rent = Math.max(0, parseFloat(rent.toString().replace(/,/g, '')) || 0);
+    pension = Math.max(0, parseFloat(pension.toString().replace(/,/g, '')) || 0);
+    nhis = Math.max(0, parseFloat(nhis.toString().replace(/,/g, '')) || 0);
+    nhf = Math.max(0, parseFloat(nhf.toString().replace(/,/g, '')) || 0);
+    insurance = Math.max(0, parseFloat(insurance.toString().replace(/,/g, '')) || 0);
+    cryptoGain = Math.max(0, parseFloat(cryptoGain.toString().replace(/,/g, '')) || 0);
+    expenses = Math.max(0, parseFloat(expenses.toString().replace(/,/g, '')) || 0);
     
     // Calculate reliefs with caps
     const rentRelief = Math.min(TaxConfig.maxRentRelief, rent * TaxConfig.rentReliefRate);
@@ -378,7 +384,7 @@ function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto
     const monthlyTakeHome = (income / 12) - monthlyTax;
     
     // Calculate effective tax rate
-    const effectiveTaxRate = ((tax + cryptoTax) / income) * 100;
+    const effectiveTaxRate = income > 0 ? ((tax + cryptoTax) / income) * 100 : 0;
     
     return {
         income,
@@ -404,7 +410,8 @@ function calculateTax() {
         const element = document.getElementById(id);
         if (!element) return 0;
         const value = element.value.replace(/,/g, '');
-        return parseFloat(value) || 0;
+        const numValue = parseFloat(value);
+        return isNaN(numValue) ? 0 : numValue;
     };
     
     const income = getValue('income');
@@ -482,6 +489,15 @@ function displayResults(result) {
     const monthlyDiv = document.getElementById('monthly');
     
     if (!resultDiv || !monthlyDiv) return;
+    
+    // Helper function to get values for display
+    const getValue = (id) => {
+        const element = document.getElementById(id);
+        if (!element) return 0;
+        const value = element.value.replace(/,/g, '');
+        const numValue = parseFloat(value);
+        return isNaN(numValue) ? 0 : numValue;
+    };
     
     // Format currency display
     const incomeDisplay = formatCurrency(result.income);
@@ -664,7 +680,9 @@ function displayResults(result) {
 
 function toggleMonthlyDetails() {
     const details = document.getElementById('monthlyDetails');
-    const button = event.currentTarget;
+    const button = event?.currentTarget;
+    
+    if (!button) return;
     
     if (details.style.display === 'none') {
         details.style.display = 'block';
@@ -679,8 +697,12 @@ function saveInputs() {
     const fields = ["income", "rent", "pension", "nhis", "nhf", "insurance", "crypto", "expenses"];
     fields.forEach(id => {
         const field = document.getElementById(id);
-        if (field && field.value) {
-            localStorage.setItem(id, field.value);
+        if (field) {
+            // Save the raw value (without commas)
+            const rawValue = field.value.replace(/,/g, '');
+            if (rawValue !== '') {
+                localStorage.setItem(id, rawValue);
+            }
         }
     });
     localStorage.setItem('currency', currencySymbol);
@@ -720,14 +742,6 @@ function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Add logo (if available)
-        try {
-            // You can add your logo here
-            // doc.addImage(logoData, 'PNG', 10, 10, 30, 30);
-        } catch (e) {
-            console.log('Logo not available for PDF');
-        }
-        
         // Title
         doc.setFontSize(20);
         doc.setTextColor(42, 92, 154);
@@ -745,7 +759,7 @@ function downloadPDF() {
         
         // Add a simple table
         const income = document.getElementById('income')?.value || 'Not provided';
-        doc.text(`Annual Income: ${currencySymbol} ${parseFloat(income.replace(/,/g, '')).toLocaleString()}`, 20, 70);
+        doc.text(`Annual Income: ${currencySymbol} ${parseFloat(income.replace(/,/g, '') || 0).toLocaleString()}`, 20, 70);
         
         // Add disclaimer
         doc.setFontSize(10);
@@ -907,25 +921,63 @@ function showNotification(message, type = 'info') {
     }, 5000);
 }
 
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    // Ctrl + Enter to calculate
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        calculateTax();
-    }
+// Fix for event parameter in toggleMonthlyDetails
+window.toggleMonthlyDetails = function(event) {
+    const details = document.getElementById('monthlyDetails');
+    if (!details) return;
     
-    // Escape to clear
-    if (e.key === 'Escape') {
-        clearInputs();
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        if (event && event.currentTarget) {
+            event.currentTarget.innerHTML = '<i class="bi bi-chevron-up"></i> Hide Details';
+        }
+    } else {
+        details.style.display = 'none';
+        if (event && event.currentTarget) {
+            event.currentTarget.innerHTML = '<i class="bi bi-chevron-down"></i> Details';
+        }
     }
-});
+};
 
-// Print styles
-window.addEventListener('beforeprint', () => {
-    document.body.classList.add('printing');
-});
+// Add this to your existing code at the end to handle the fillSampleData function
+window.fillSampleData = function() {
+    // Clear any existing inputs first
+    clearInputs();
+    
+    // Set sample data
+    document.getElementById('income').value = '4500000';
+    document.getElementById('rent').value = '1200000';
+    document.getElementById('pension').value = '180000';
+    document.getElementById('nhis').value = '50000';
+    document.getElementById('nhf').value = '30000';
+    document.getElementById('insurance').value = '80000';
+    document.getElementById('crypto').value = '150000';
+    document.getElementById('expenses').value = '900000';
+    
+    // Format the values for display
+    const fields = ["income", "rent", "pension", "nhis", "nhf", "insurance", "crypto", "expenses"];
+    fields.forEach(id => {
+        const field = document.getElementById(id);
+        if (field && field.value) {
+            const num = parseFloat(field.value.replace(/,/g, ''));
+            if (!isNaN(num)) {
+                field.value = num.toLocaleString('en-US', {
+                    maximumFractionDigits: 0,
+                    minimumFractionDigits: 0
+                });
+            }
+        }
+    });
+    
+    // Show notification
+    showNotification('Sample data loaded. Click "Calculate Tax" to see results.', 'info');
+};
 
-window.addEventListener('afterprint', () => {
-    document.body.classList.remove('printing');
-});
+// Export functions to global scope
+window.calculateTax = calculateTax;
+window.clearInputs = clearInputs;
+window.downloadPDF = downloadPDF;
+window.readOutLoud = readOutLoud;
+window.updateCurrency = updateCurrency;
+window.setMode = setMode;
+window.shareWhatsApp = shareWhatsApp;
