@@ -310,6 +310,9 @@ function calculateTax() {
     
     // FEATURE: Auto scroll to results section
     scrollToSection('result');
+
+     // MONETIZATION: Show ads after user engagement
+    showAdsAfterCalculation();
 }
 
 function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses) {
