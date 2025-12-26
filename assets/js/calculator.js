@@ -535,12 +535,12 @@ function displayResults(result) {
                 </div>
             </div>
             
-            <div class="text-center mt-4">
+          <div class="text-center mt-4">
                 <button class="btn btn-success me-2" onclick="downloadPDF()">
                     <i class="bi bi-download me-2"></i>Download PDF
                 </button>
-                <button class="btn btn-info me-2" onclick="shareWhatsApp()">
-                    <i class="bi bi-whatsapp me-2"></i>Share
+                <button class="btn btn-info me-2" onclick="openShareModal()">
+                    <i class="bi bi-share me-2"></i>Share
                 </button>
             </div>
         </div>
