@@ -38,11 +38,18 @@
             font-weight: 600;
         }
         
-        body {
+       body {
             background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
             min-height: 100vh;
-            padding-bottom: 60px;
+            display: flex;
+            flex-direction: column;
         }
+        
+        .container {
+            flex: 1 0 auto;
+        }
+
+
         
         .navbar-brand {
             font-weight: 700;
@@ -288,10 +295,12 @@
             background: var(--dark-bg);
             color: white;
             padding: 2rem 0;
-            margin-top: 3rem;
             border-top: 5px solid var(--primary-color);
+            width: 100%;
+            margin-top: auto;
+            flex-shrink: 0;
         }
-        
+                
         .step-indicator {
             display: flex;
             align-items: center;
