@@ -829,6 +829,29 @@
         <i class="bi bi-lightning-charge me-2"></i>Quick Calculate
     </button>
 </div>
+
+    <!-- Donation Section -->
+<div class="container mt-5">
+    <div class="card border-success shadow-sm">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0"><i class="bi bi-heart-fill me-2"></i>Support This Free Tool</h5>
+        </div>
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <p class="mb-2">This tax calculator is completely free to use. Help us maintain and improve it by making a donation.</p>
+                    <p class="text-muted small mb-0">Your support helps cover server costs and future development.</p>
+                </div>
+                <div class="col-md-4 text-center">
+                    <button class="btn btn-success btn-lg mb-2" onclick="showDonationOptions()">
+                        <i class="bi bi-cash-coin me-2"></i>Support Us
+                    </button>
+                    <p class="small text-muted">100% secure via Flutterwave</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
     
     <!-- Footer -->
     <footer class="footer">
@@ -873,6 +896,70 @@
     <script src="assets/js/calculator.js"></script>
     <!-- Navigation and Pages Script -->
     <script src="assets/js/navigation.js"></script>
+
+    <!-- Donation Modal -->
+<div class="modal fade" id="donationModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-heart-fill me-2"></i>Support NGTaxCalculator</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="bi bi-gift-fill text-success" style="font-size: 3rem;"></i>
+                    <h4 class="mt-3">Choose Donation Amount</h4>
+                    <p class="text-muted">Every contribution helps keep this tool free for everyone</p>
+                </div>
+                
+                <div class="row text-center mb-4">
+                    <div class="col-4 mb-3">
+                        <button class="btn btn-outline-success w-100 donation-amount" data-amount="500">
+                            ₦500
+                        </button>
+                    </div>
+                    <div class="col-4 mb-3">
+                        <button class="btn btn-outline-success w-100 donation-amount" data-amount="1000">
+                            ₦1,000
+                        </button>
+                    </div>
+                    <div class="col-4 mb-3">
+                        <button class="btn btn-outline-success w-100 donation-amount" data-amount="2000">
+                            ₦2,000
+                        </button>
+                    </div>
+                    <div class="col-4 mb-3">
+                        <button class="btn btn-outline-success w-100 donation-amount" data-amount="5000">
+                            ₦5,000
+                        </button>
+                    </div>
+                    <div class="col-4 mb-3">
+                        <button class="btn btn-outline-success w-100 donation-amount" data-amount="10000">
+                            ₦10,000
+                        </button>
+                    </div>
+                    <div class="col-4 mb-3">
+                        <button class="btn btn-success w-100" onclick="showCustomAmount()">
+                            Custom
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="customAmountSection" style="display: none;">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text">₦</span>
+                        <input type="number" class="form-control" id="customAmount" placeholder="Enter amount" min="100">
+                        <button class="btn btn-success" onclick="processDonation()">Donate</button>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <small><i class="bi bi-shield-check me-1"></i>Donations processed securely via Flutterwave. You'll receive a tax-deductible receipt.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
   
 </body>
 </html>
