@@ -11,7 +11,7 @@ function showInfo(pageType) {
             break;
         case 'guide':
             downloadPDF();
-            break;
+            return; // Don't scroll for PDF download
         case 'contact':
             showContactPage();
             break;
@@ -20,8 +20,8 @@ function showInfo(pageType) {
             break;
     }
     
-    // Scroll to top when switching pages
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Auto-scroll to the loaded content
+    autoScrollToContent();
 }
 
 function showTaxLawPage() {
@@ -453,12 +453,27 @@ function showCalculator() {
     if (monthlyDiv) monthlyDiv.innerHTML = '';
     
     // Scroll to calculator form
-    scrollToSection('calculatorForm');
+    setTimeout(() => {
+        scrollToSection('calculatorForm');
+    }, 100);
 }
 
 function hideAllPages() {
     // This function ensures only one page is shown at a time
     // The actual hiding is done by clearing the result/monthly divs in each show function
+}
+
+// Auto-scroll function for all content pages
+function autoScrollToContent() {
+    setTimeout(() => {
+        const resultDiv = document.getElementById("result");
+        if (resultDiv && resultDiv.innerHTML.trim()) {
+            resultDiv.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }
+    }, 100);
 }
 
 // Make functions globally available
