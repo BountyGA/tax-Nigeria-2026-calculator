@@ -873,6 +873,7 @@ function downloadPDF() {
     }
 }
 
+// Keep this function for backward compatibility
 function shareWhatsApp() {
     const resultDiv = document.getElementById('result');
     if (!resultDiv || !resultDiv.innerHTML.trim()) {
@@ -880,11 +881,76 @@ function shareWhatsApp() {
         return;
     }
     
-    const text = `Check out the Nigeria 2026 Tax Calculator! I just projected my taxes under the new law. Try it for yourself: ${window.location.href}`;
-    const encodedText = encodeURIComponent(text);
-    const url = `https://wa.me/?text=${encodedText}`;
+    // Use the new function for WhatsApp
+    shareOnSocial('whatsapp');
     
-    window.open(url, '_blank', 'noopener,noreferrer');
+    // Track the event
+    trackEvent('social', 'share', 'whatsapp');
+}
+
+// New function for multiple platforms
+function shareOnSocial(platform) {
+    // Check if results exist (for all platforms)
+    const resultDiv = document.getElementById('result');
+    if (!resultDiv || !resultDiv.innerHTML.trim()) {
+        showNotification("Please calculate your tax first before sharing.", "warning");
+        return;
+    }
+    
+    const text = `Check out this free Nigeria 2026 Tax Calculator! I just projected my taxes under the new reforms. Try it for yourself: ${window.location.href}`;
+    const encodedText = encodeURIComponent(text);
+    const encodedUrl = encodeURIComponent(window.location.href);
+    
+    let url = '';
+    
+    switch(platform) {
+        case 'whatsapp':
+            url = `https://wa.me/?text=${encodedText}`;
+            break;
+        case 'facebook':
+            url = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}&quote=${encodedText}`;
+            break;
+        case 'twitter':
+            url = `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`;
+            break;
+        case 'linkedin':
+            url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
+            break;
+        case 'telegram':
+            url = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`;
+            break;
+    }
+    
+    if (url) {
+        window.open(url, '_blank', 'width=600,height=400,noopener,noreferrer');
+    }
+}
+
+function copyShareLink() {
+    const shareLink = document.getElementById('shareLink');
+    shareLink.select();
+    shareLink.setSelectionRange(0, 99999); // For mobile
+    
+    navigator.clipboard.writeText(shareLink.value)
+        .then(() => {
+            showNotification('Link copied to clipboard!', 'success');
+        })
+        .catch(err => {
+            // Fallback for older browsers
+            document.execCommand('copy');
+            showNotification('Link copied!', 'success');
+        });
+}
+
+function openShareModal() {
+    const resultDiv = document.getElementById('result');
+    if (!resultDiv || !resultDiv.innerHTML.trim()) {
+        showNotification("Please calculate your tax first before sharing.", "warning");
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('shareModal'));
+    modal.show();
 }
 
 function fillSampleData() {
