@@ -5,6 +5,15 @@ let taxBrackets = [];
 let currencySymbol = "₦";
 let currentMode = "advanced";
 
+// Set default tax brackets immediately so calculator works even if loading fails
+taxBrackets = [
+    { min: 0, max: 800000, rate: 0.00 },
+    { min: 800000, max: 1600000, rate: 0.07 },
+    { min: 1600000, max: 3200000, rate: 0.11 },
+    { min: 3200000, max: 6400000, rate: 0.15 },
+    { min: 6400000, max: Infinity, rate: 0.24 }
+];
+
 // Currency formatting
 function formatCurrency(amount) {
     if (!amount && amount !== 0) return `${currencySymbol} 0.00`;
@@ -34,8 +43,11 @@ window.onload = function() {
     // Load saved values
     loadSavedValues();
     
-    // Load tax brackets
+    // Load tax brackets in background (non-blocking)
     loadBrackets();
+    
+    // Enable calculate button immediately
+    enableCalculateButton();
 };
 
 // Simple value loader
@@ -50,52 +62,65 @@ function loadSavedValues() {
     });
 }
 
-// Simple input setup - NO AGGRESSIVE VALIDATION
-function setupSimpleInputs() {
-    // Just add a simple save on blur
-    const inputs = document.querySelectorAll('input[type="number"]');
-    inputs.forEach(input => {
-        input.addEventListener('blur', function() {
-            if (this.value) {
-                localStorage.setItem(this.id, this.value);
-            }
-        });
-    });
-}
-
-// Load tax brackets
+// Load tax brackets (non-blocking, with timeout)
 async function loadBrackets() {
+    // Show loading state
+    const container = document.getElementById("bracketTable");
+    if (container) {
+        container.innerHTML = `
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-table me-2"></i>2026 Tax Brackets</h5>
+                </div>
+                <div class="card-body p-4 text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading tax brackets...</span>
+                    </div>
+                    <p class="mt-2">Loading tax rates...</p>
+                </div>
+            </div>
+        `;
+    }
+    
     try {
-        const response = await fetch("docs/tax_brackets_reference.json");
+        // Add timeout to prevent hanging forever
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        const response = await fetch("docs/tax_brackets_reference.json", {
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
         const data = await response.json();
         
-        taxBrackets = data.map(b => ({
-            min: Number(b.min),
-            max: b.max === null ? Infinity : Number(b.max),
-            rate: Number(b.rate)
-        })).sort((a, b) => a.min - b.min);
-        
-        renderBracketTable();
-        enableCalculateButton();
+        if (Array.isArray(data) && data.length > 0) {
+            taxBrackets = data.map(b => ({
+                min: Number(b.min) || 0,
+                max: b.max === null ? Infinity : (Number(b.max) || Infinity),
+                rate: Number(b.rate) || 0
+            })).sort((a, b) => a.min - b.min);
+            
+            console.log("Loaded tax brackets:", taxBrackets);
+        }
         
     } catch (error) {
-        console.error("Error loading brackets:", error);
-        // Use default brackets
-        taxBrackets = [
-            { min: 0, max: 800000, rate: 0.00 },
-            { min: 800000, max: 1600000, rate: 0.07 },
-            { min: 1600000, max: 3200000, rate: 0.11 },
-            { min: 3200000, max: 6400000, rate: 0.15 },
-            { min: 6400000, max: Infinity, rate: 0.24 }
-        ];
-        renderBracketTable();
-        enableCalculateButton();
+        console.warn("Error loading brackets, using defaults:", error);
+        // Keep using default brackets that were set at the beginning
     }
+    
+    // Always render the bracket table (with defaults if fetch failed)
+    renderBracketTable();
 }
 
 function renderBracketTable() {
     const container = document.getElementById("bracketTable");
-    if (!container || !taxBrackets.length) return;
+    if (!container) return;
     
     let html = `
         <div class="card border-0 shadow-sm">
@@ -185,6 +210,9 @@ function calculateTax() {
     
     // Save current values
     saveCurrentValues();
+    
+    // Show success notification
+    showNotification('Tax calculation completed successfully!', 'success');
 }
 
 function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses) {
