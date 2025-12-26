@@ -971,6 +971,44 @@
         </div>
     </div>
 </div>
-  
+
+<!-- Social Sharing Modal -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-share me-2"></i>Share Calculator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <p class="mb-3">Share this useful tool with others!</p>
+                <div class="d-flex justify-content-center gap-3">
+                    <button class="btn btn-success rounded-circle p-3" onclick="shareOnSocial('whatsapp')" title="WhatsApp">
+                        <i class="bi bi-whatsapp fs-4"></i>
+                    </button>
+                    <button class="btn btn-primary rounded-circle p-3" onclick="shareOnSocial('facebook')" title="Facebook">
+                        <i class="bi bi-facebook fs-4"></i>
+                    </button>
+                    <button class="btn btn-info rounded-circle p-3" onclick="shareOnSocial('twitter')" title="Twitter">
+                        <i class="bi bi-twitter fs-4"></i>
+                    </button>
+                    <button class="btn btn-primary rounded-circle p-3" onclick="shareOnSocial('linkedin')" title="LinkedIn">
+                        <i class="bi bi-linkedin fs-4"></i>
+                    </button>
+                </div>
+                <div class="mt-4">
+                    <p class="small text-muted">Or copy link:</p>
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="shareLink" value="https://ngtaxcalculator.online" readonly>
+                        <button class="btn btn-outline-secondary" onclick="copyShareLink()">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+    
 </body>
 </html>
