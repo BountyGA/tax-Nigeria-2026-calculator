@@ -12,6 +12,21 @@ let taxBrackets = [
 let currencySymbol = "₦";
 let currentMode = "advanced";
 
+// ==============================================
+// FEATURE 1: AUTO SCROLL FUNCTIONALITY
+// ==============================================
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        setTimeout(() => {
+            section.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+        }, 100);
+    }
+}
+
 // Currency formatting
 function formatCurrency(amount) {
     if (amount === null || amount === undefined || isNaN(amount)) {
@@ -48,7 +63,56 @@ window.onload = function() {
     
     // Render initial bracket table with defaults
     renderBracketTable();
+    
+    // Add scroll-to functionality to key buttons
+    addScrollToFunctionality();
 };
+
+// Add scroll-to functionality to key buttons
+function addScrollToFunctionality() {
+    // Add scroll to form from "Start Calculating" button in HTML
+    setTimeout(() => {
+        const startCalcBtn = document.querySelector('[data-scroll-to="form"]');
+        if (startCalcBtn) {
+            startCalcBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                scrollToSection('calculatorForm');
+            });
+        }
+        
+        // Add scroll to brackets from "View Tax Brackets" button
+        const viewBracketsBtn = document.querySelector('[data-scroll-to="brackets"]');
+        if (viewBracketsBtn) {
+            viewBracketsBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                scrollToSection('bracketTable');
+            });
+        }
+        
+        // Make sample data button scroll to results
+        const sampleBtn = document.querySelector('button[onclick*="fillSampleData"]');
+        if (sampleBtn) {
+            sampleBtn.addEventListener('click', function() {
+                setTimeout(() => {
+                    document.getElementById('income').focus();
+                }, 300);
+            });
+        }
+        
+        // Add scroll from navbar links
+        const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                if (this.getAttribute('href') === '#') {
+                    e.preventDefault();
+                    if (this.textContent.includes('Calculator')) {
+                        scrollToSection('calculatorForm');
+                    }
+                }
+            });
+        });
+    }, 500);
+}
 
 // Simple value loader
 function loadSavedValues() {
@@ -180,7 +244,7 @@ function calculateExampleTax(income) {
     return tax;
 }
 
-// Main calculation function
+// Main calculation function - UPDATED WITH SCROLLING
 function calculateTax() {
     console.log("Calculate button clicked");
     
@@ -243,6 +307,9 @@ function calculateTax() {
     
     // Show success notification
     showNotification('Tax calculation completed successfully!', 'success');
+    
+    // FEATURE: Auto scroll to results section
+    scrollToSection('result');
 }
 
 function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses) {
@@ -476,10 +543,8 @@ function displayResults(result) {
         </div>
     `;
     
-    // Scroll to results
-    setTimeout(() => {
-        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 100);
+    // Scroll to results - Updated to use the new function
+    scrollToSection('result');
 }
 
 function toggleMonthlyDetails() {
@@ -548,12 +613,18 @@ function setMode(mode) {
         if (advancedCard) advancedCard.classList.remove('active');
         localStorage.setItem('taxMode', 'simple');
         showNotification('Simple mode activated. Only income field is required.', 'info');
+        
+        // Scroll to form when switching modes
+        scrollToSection('calculatorForm');
     } else {
         if (advancedFields) advancedFields.style.display = 'block';
         if (simpleCard) simpleCard.classList.remove('active');
         if (advancedCard) advancedCard.classList.add('active');
         localStorage.setItem('taxMode', 'advanced');
         showNotification('Advanced mode activated. All fields are available.', 'info');
+        
+        // Scroll to form when switching modes
+        scrollToSection('calculatorForm');
     }
 }
 
@@ -576,11 +647,14 @@ function updateCurrency() {
     }
 }
 
-// Simple PDF download (without logo for now)
+// ==============================================
+// FEATURE 2: ENHANCED PDF DOWNLOAD WITH LOGO
+// ==============================================
 function downloadPDF() {
     const resultDiv = document.getElementById('result');
     if (!resultDiv || !resultDiv.innerHTML.trim()) {
         showNotification("Please calculate your tax first before downloading the report.", "warning");
+        scrollToSection('calculatorForm');
         return;
     }
     
@@ -588,26 +662,207 @@ function downloadPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Simple PDF content
+        // Get calculation data
+        const getNumberValue = (id) => {
+            const element = document.getElementById(id);
+            if (!element || !element.value) return 0;
+            const value = element.value.replace(/,/g, '');
+            return isNaN(parseFloat(value)) ? 0 : parseFloat(value);
+        };
+        
+        const income = getNumberValue("income");
+        const rent = getNumberValue("rent");
+        const pension = getNumberValue("pension");
+        const nhis = getNumberValue("nhis");
+        const nhf = getNumberValue("nhf");
+        const insurance = getNumberValue("insurance");
+        const crypto = getNumberValue("crypto");
+        const expenses = getNumberValue("expenses");
+        
+        // Recalculate for PDF
+        const result = calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses);
+        
+        // Logo and Header
+        doc.setFillColor(42, 92, 154); // Primary color
+        doc.rect(0, 0, 210, 30, 'F'); // Header background
+        
+        // Logo text
+        doc.setFontSize(24);
+        doc.setTextColor(255, 255, 255);
+        doc.setFont("helvetica", "bold");
+        doc.text('NTAX', 20, 20);
+        
+        // Report Title
         doc.setFontSize(20);
-        doc.setTextColor(42, 92, 154);
-        doc.text('Nigeria 2026 Tax Report', 105, 20, { align: 'center' });
+        doc.text('2026 TAX CALCULATION REPORT', 105, 20, { align: 'center' });
+        
+        // Date and reference
+        doc.setFontSize(10);
+        doc.setTextColor(200, 200, 200);
+        doc.text('Generated: ' + new Date().toLocaleDateString(), 180, 20, { align: 'right' });
+        
+        // Reset text color for content
+        doc.setTextColor(0, 0, 0);
+        
+        let yPosition = 45;
+        
+        // Section 1: User Information Summary
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text('1. INCOME SUMMARY', 20, yPosition);
+        yPosition += 10;
         
         doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Annual Income: ${formatCurrency(result.income)}`, 20, yPosition);
+        yPosition += 8;
+        
+        doc.text(`Currency: ${currencySymbol === '₦' ? 'Nigerian Naira (NGN)' : 
+                 currencySymbol === '$' ? 'US Dollar (USD)' :
+                 currencySymbol === '€' ? 'Euro (EUR)' : 'British Pound (GBP)'}`, 20, yPosition);
+        yPosition += 8;
+        
+        doc.text(`Calculation Mode: ${currentMode === 'simple' ? 'Simple Mode' : 'Advanced Mode'}`, 20, yPosition);
+        yPosition += 15;
+        
+        // Section 2: Tax Breakdown
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text('2. TAX CALCULATION', 20, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        
+        // Table header
+        doc.setFillColor(42, 92, 154);
+        doc.setTextColor(255, 255, 255);
+        doc.rect(20, yPosition - 5, 170, 10, 'F');
+        doc.text('Description', 25, yPosition);
+        doc.text('Amount', 160, yPosition, { align: 'right' });
+        
+        yPosition += 15;
         doc.setTextColor(0, 0, 0);
-        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 40);
         
-        // Get income
-        const incomeField = document.getElementById('income');
-        const income = incomeField ? parseFloat(incomeField.value.replace(/,/g, '')) || 0 : 0;
+        // Tax calculation rows
+        const taxRows = [
+            ['Gross Income', formatCurrency(result.income)],
+            ['Rent Relief', formatCurrency(result.rentRelief)],
+            ['Pension Relief', formatCurrency(result.pensionRelief)],
+            ['Insurance Relief', formatCurrency(result.insuranceRelief)],
+            ['NHIS Contribution', formatCurrency(result.nhis)],
+            ['NHF Contribution', formatCurrency(result.nhf)],
+            ['Business Expenses', formatCurrency(result.expensesApplied)],
+            ['Total Reliefs', formatCurrency(result.totalReliefs)],
+            ['', ''],
+            ['TAXABLE INCOME', formatCurrency(result.taxable)],
+            ['', ''],
+            ['Income Tax', formatCurrency(result.tax)],
+            ['Crypto Tax (10%)', formatCurrency(result.cryptoTax)],
+        ];
         
-        doc.text(`Annual Income: ${formatCurrency(income)}`, 20, 60);
+        taxRows.forEach(row => {
+            if (row[0] === 'TAXABLE INCOME') {
+                doc.setFont("helvetica", "bold");
+            }
+            
+            doc.text(row[0], 25, yPosition);
+            doc.text(row[1], 160, yPosition, { align: 'right' });
+            yPosition += 7;
+            
+            if (row[0] === 'TAXABLE INCOME') {
+                doc.setFont("helvetica", "normal");
+            }
+        });
+        
+        yPosition += 5;
+        
+        // Total Tax
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(30, 130, 76); // Green color for total
+        doc.text('TOTAL TAX DUE: ' + formatCurrency(result.totalTax), 20, yPosition);
+        doc.setTextColor(0, 0, 0);
+        yPosition += 10;
+        
+        // Effective Rate
+        doc.setFontSize(12);
+        doc.text(`Effective Tax Rate: ${result.effectiveRate.toFixed(2)}%`, 20, yPosition);
+        yPosition += 15;
+        
+        // Section 3: Monthly Breakdown
+        if (yPosition > 220) {
+            doc.addPage();
+            yPosition = 20;
+        }
+        
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text('3. MONTHLY BREAKDOWN', 20, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "normal");
+        
+        const monthlyRows = [
+            ['Gross Monthly Income', formatCurrency(result.income / 12)],
+            ['Monthly Taxable Income', formatCurrency(result.monthlyTaxable)],
+            ['Monthly Tax', formatCurrency(result.monthlyTax)],
+            ['', ''],
+            ['TAKE HOME PAY', formatCurrency(result.monthlyTakeHome)]
+        ];
+        
+        monthlyRows.forEach(row => {
+            if (row[0] === 'TAKE HOME PAY') {
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(30, 130, 76);
+            }
+            
+            doc.text(row[0], 25, yPosition);
+            doc.text(row[1], 160, yPosition, { align: 'right' });
+            yPosition += 8;
+            
+            if (row[0] === 'TAKE HOME PAY') {
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(0, 0, 0);
+            }
+        });
+        
+        yPosition += 10;
+        
+        // Section 4: Important Notes
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.text('4. IMPORTANT NOTES', 20, yPosition);
+        yPosition += 10;
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        
+        const notes = [
+            '• This is an estimate based on proposed 2026 tax reforms',
+            '• Actual taxes may vary based on final legislation',
+            '• Keep receipts for all deductions claimed',
+            '• Consult a tax professional for official advice',
+            '• Report generated by NTAX 2026 Calculator',
+            `• Report ID: NTAX-${Date.now().toString().slice(-8)}`
+        ];
+        
+        notes.forEach(note => {
+            doc.text(note, 25, yPosition);
+            yPosition += 6;
+        });
+        
+        // Footer with logo
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('© 2024 NTAX Calculator | www.taxcalc.ng | Generated with NTAX Logo', 105, 285, { align: 'center' });
         
         // Save PDF
-        const fileName = `Nigeria_Tax_2026_Report_${Date.now()}.pdf`;
+        const fileName = `NTAX_2026_Report_${Date.now().toString().slice(-6)}.pdf`;
         doc.save(fileName);
         
-        showNotification('PDF report downloaded successfully!', 'success');
+        showNotification('PDF report downloaded successfully with your logo!', 'success');
         
     } catch (error) {
         console.error('PDF generation error:', error);
@@ -645,6 +900,14 @@ function fillSampleData() {
     
     // Show notification
     showNotification('Sample data loaded. Click "Calculate Tax" to see results.', 'info');
+    
+    // Scroll to calculate button
+    setTimeout(() => {
+        const calcBtn = document.querySelector('button[onclick*="calculateTax"]');
+        if (calcBtn) {
+            calcBtn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }, 300);
 }
 
 // Notification function
