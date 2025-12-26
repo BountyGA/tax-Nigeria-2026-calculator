@@ -350,6 +350,108 @@
         .fade-in {
             animation: fadeIn 0.5s ease-out;
         }
+
+        /* Timeline Styles */
+.timeline {
+    position: relative;
+    padding-left: 30px;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--primary-color);
+    opacity: 0.3;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 30px;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -28px;
+    top: 5px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    border: 3px solid white;
+    box-shadow: 0 0 0 3px rgba(42, 92, 154, 0.2);
+}
+
+.timeline-date {
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 5px;
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 3px solid var(--primary-color);
+}
+
+.timeline-content h6 {
+    color: var(--dark-bg);
+    margin-bottom: 5px;
+}
+
+.timeline-content p {
+    margin-bottom: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* FAQ Styles */
+.accordion-button:not(.collapsed) {
+    background-color: rgba(42, 92, 154, 0.1);
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.accordion-button:focus {
+    box-shadow: 0 0 0 0.25rem rgba(42, 92, 154, 0.25);
+    border-color: var(--primary-color);
+}
+
+/* Contact Form Styles */
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(42, 92, 154, 0.15);
+}
+
+/* Privacy Policy Styles */
+.privacy-section {
+    margin-bottom: 2rem;
+}
+
+.privacy-section h6 {
+    color: var(--primary-color);
+    border-bottom: 2px solid rgba(42, 92, 154, 0.1);
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Back to Calculator Button */
+.back-to-calc {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
     </style>
 </head>
 <body>
@@ -364,20 +466,28 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="#"><i class="bi bi-calculator me-1"></i>Calculator</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="showInfo('tax-law')"><i class="bi bi-file-earmark-text me-1"></i>Tax Law</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="showInfo('faq')"><i class="bi bi-question-circle me-1"></i>FAQ</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" onclick="downloadPDF()"><i class="bi bi-download me-1"></i>Guide</a>
-                    </li>
-                </ul>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#" onclick="showCalculator()">
+                        <i class="bi bi-calculator me-1"></i>Calculator
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showInfo('tax-law')">
+                        <i class="bi bi-file-earmark-text me-1"></i>Tax Law
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showInfo('faq')">
+                        <i class="bi bi-question-circle me-1"></i>FAQ
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="#" onclick="showInfo('contact')">
+                        <i class="bi bi-person-lines-fill me-1"></i>Advisor
+                    </a>
+                </li>
+            </ul>
             </div>
         </div>
     </nav>
@@ -682,13 +792,14 @@
                         <a href="#" class="text-light"><i class="bi bi-whatsapp"></i></a>
                     </div>
                 </div>
-                <div class="col-md-4 mb-4">
+               <div class="col-md-4 mb-4">
                     <h5>Quick Links</h5>
                     <ul class="list-unstyled">
-                        <li><a href="#" class="text-light text-decoration-none">Tax Law Summary</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Frequently Asked Questions</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Contact Tax Advisor</a></li>
-                        <li><a href="#" class="text-light text-decoration-none">Privacy Policy</a></li>
+                        <li><a href="#" class="text-light text-decoration-none" onclick="showInfo('tax-law')">Tax Law Summary</a></li>
+                        <li><a href="#" class="text-light text-decoration-none" onclick="showInfo('faq')">Frequently Asked Questions</a></li>
+                        <li><a href="#" class="text-light text-decoration-none" onclick="showInfo('contact')">Contact Tax Advisor</a></li>
+                        <li><a href="#" class="text-light text-decoration-none" onclick="showInfo('privacy')">Privacy Policy</a></li>
+                        <li><a href="#" class="text-light text-decoration-none" onclick="downloadPDF()">Download Tax Guide</a></li>
                     </ul>
                 </div>
                 <div class="col-md-4 mb-4">
@@ -708,7 +819,8 @@
     
     <!-- Calculator Logic -->
     <script src="assets/js/calculator.js"></script>
-    
+    <!-- Navigation and Pages Script -->
+    <script src="assets/js/navigation.js"></script>
   
 </body>
 </html>
