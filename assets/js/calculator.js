@@ -1,22 +1,22 @@
-// Simple Nigeria Tax Calculator 2026 - WORKING VERSION
+// Simple Nigeria Tax Calculator 2026 - FIXED VERSION
 
 // Global variables
-let taxBrackets = [];
+let taxBrackets = [
+    { min: 0, max: 800000, rate: 0.00 },
+    { min: 800000, max: 3000000, rate: 0.15 },
+    { min: 3000000, max: 12000000, rate: 0.18 },
+    { min: 12000000, max: 25000000, rate: 0.21 },
+    { min: 25000000, max: 50000000, rate: 0.23 },
+    { min: 50000000, max: Infinity, rate: 0.25 }
+];
 let currencySymbol = "₦";
 let currentMode = "advanced";
 
-// Set default tax brackets immediately so calculator works even if loading fails
-taxBrackets = [
-    { min: 0, max: 800000, rate: 0.00 },
-    { min: 800000, max: 1600000, rate: 0.07 },
-    { min: 1600000, max: 3200000, rate: 0.11 },
-    { min: 3200000, max: 6400000, rate: 0.15 },
-    { min: 6400000, max: Infinity, rate: 0.24 }
-];
-
 // Currency formatting
 function formatCurrency(amount) {
-    if (!amount && amount !== 0) return `${currencySymbol} 0.00`;
+    if (amount === null || amount === undefined || isNaN(amount)) {
+        return `${currencySymbol} 0.00`;
+    }
     
     return `${currencySymbol} ${parseFloat(amount).toLocaleString("en-NG", {
         minimumFractionDigits: 2,
@@ -46,8 +46,8 @@ window.onload = function() {
     // Load tax brackets in background (non-blocking)
     loadBrackets();
     
-    // Enable calculate button immediately
-    enableCalculateButton();
+    // Render initial bracket table with defaults
+    renderBracketTable();
 };
 
 // Simple value loader
@@ -55,37 +55,20 @@ function loadSavedValues() {
     const fields = ["income", "rent", "pension", "nhis", "nhf", "insurance", "crypto", "expenses"];
     fields.forEach(id => {
         const saved = localStorage.getItem(id);
-        if (saved !== null && saved !== '') {
+        if (saved !== null && saved !== '' && !isNaN(saved)) {
             const field = document.getElementById(id);
-            if (field) field.value = saved;
+            if (field) {
+                field.value = parseFloat(saved).toLocaleString('en-NG');
+            }
         }
     });
 }
 
 // Load tax brackets (non-blocking, with timeout)
 async function loadBrackets() {
-    // Show loading state
-    const container = document.getElementById("bracketTable");
-    if (container) {
-        container.innerHTML = `
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-gradient-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-table me-2"></i>2026 Tax Brackets</h5>
-                </div>
-                <div class="card-body p-4 text-center">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading tax brackets...</span>
-                    </div>
-                    <p class="mt-2">Loading tax rates...</p>
-                </div>
-            </div>
-        `;
-    }
-    
     try {
-        // Add timeout to prevent hanging forever
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
         
         const response = await fetch("docs/tax_brackets_reference.json", {
             signal: controller.signal
@@ -93,28 +76,25 @@ async function loadBrackets() {
         
         clearTimeout(timeoutId);
         
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (Array.isArray(data) && data.length > 0) {
-            taxBrackets = data.map(b => ({
-                min: Number(b.min) || 0,
-                max: b.max === null ? Infinity : (Number(b.max) || Infinity),
-                rate: Number(b.rate) || 0
-            })).sort((a, b) => a.min - b.min);
+        if (response.ok) {
+            const data = await response.json();
             
-            console.log("Loaded tax brackets:", taxBrackets);
+            if (Array.isArray(data) && data.length > 0) {
+                taxBrackets = data.map(b => ({
+                    min: Number(b.min) || 0,
+                    max: (b.max === null || b.max === undefined) ? Infinity : Number(b.max),
+                    rate: Number(b.rate) || 0
+                })).sort((a, b) => a.min - b.min);
+                
+                console.log("Loaded tax brackets:", taxBrackets);
+            }
         }
-        
     } catch (error) {
         console.warn("Error loading brackets, using defaults:", error);
-        // Keep using default brackets that were set at the beginning
+        // Keep using default brackets
     }
     
-    // Always render the bracket table (with defaults if fetch failed)
+    // Update the displayed brackets
     renderBracketTable();
 }
 
@@ -125,7 +105,7 @@ function renderBracketTable() {
     let html = `
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-gradient-primary text-white">
-                <h5 class="mb-0"><i class="bi bi-table me-2"></i>2026 Tax Brackets</h5>
+                <h5 class="mb-0"><i class="bi bi-table me-2"></i>2026 Proposed Tax Brackets</h5>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -134,6 +114,7 @@ function renderBracketTable() {
                             <tr>
                                 <th class="ps-4">Income Range</th>
                                 <th class="text-center">Tax Rate</th>
+                                <th class="text-center pe-4">Example Tax</th>
                             </tr>
                         </thead>
                         <tbody>`;
@@ -143,15 +124,26 @@ function renderBracketTable() {
             'and above' : 
             formatCurrency(bracket.max);
         
+        // Calculate example tax
+        const exampleIncome = bracket.max === Infinity ? 
+            Math.max(bracket.min * 2, 10000000) : 
+            Math.floor((bracket.min + bracket.max) / 2);
+        
+        const exampleTax = calculateExampleTax(exampleIncome);
+        
         html += `
             <tr>
                 <td class="ps-4">
                     ${formatCurrency(bracket.min)} – ${maxDisplay}
                 </td>
                 <td class="text-center">
-                    <span class="badge bg-primary bg-opacity-10 text-primary">
+                    <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2">
                         ${(bracket.rate * 100).toFixed(1)}%
                     </span>
+                </td>
+                <td class="text-center pe-4">
+                    <div class="text-success fw-medium">${formatCurrency(exampleTax)}</div>
+                    <small class="text-muted">on ${formatCurrency(exampleIncome)}</small>
                 </td>
             </tr>`;
     });
@@ -161,17 +153,31 @@ function renderBracketTable() {
                     </table>
                 </div>
             </div>
+            <div class="card-footer bg-light">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Example tax calculated for midpoint of each bracket
+                </small>
+            </div>
         </div>`;
     
     container.innerHTML = html;
 }
 
-function enableCalculateButton() {
-    const btn = document.getElementById("calcBtn");
-    if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-lightning-charge me-2"></i>Calculate Tax';
+function calculateExampleTax(income) {
+    let tax = 0;
+    let remaining = income;
+    
+    for (const bracket of taxBrackets) {
+        if (remaining > bracket.min) {
+            const amountInBracket = Math.min(remaining, bracket.max) - bracket.min;
+            if (amountInBracket > 0) {
+                tax += amountInBracket * bracket.rate;
+            }
+        }
     }
+    
+    return tax;
 }
 
 // Main calculation function
@@ -179,28 +185,52 @@ function calculateTax() {
     console.log("Calculate button clicked");
     
     // Get all input values
-    const income = parseFloat(document.getElementById("income").value) || 0;
+    const getNumberValue = (id) => {
+        const element = document.getElementById(id);
+        if (!element || !element.value) return 0;
+        
+        // Remove commas and parse
+        const value = element.value.replace(/,/g, '');
+        const num = parseFloat(value);
+        return isNaN(num) ? 0 : num;
+    };
+    
+    const income = getNumberValue("income");
     
     // Validate income
     if (income <= 0) {
-        document.getElementById("result").innerHTML = `
-            <div class="alert alert-danger">
-                <i class="bi bi-exclamation-triangle me-2"></i>
-                Please enter a valid annual income amount.
-            </div>
-        `;
-        document.getElementById("income").focus();
+        const resultDiv = document.getElementById("result");
+        if (resultDiv) {
+            resultDiv.innerHTML = `
+                <div class="alert alert-danger fade-in">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-exclamation-triangle-fill me-3 fs-4"></i>
+                        <div>
+                            <h5 class="alert-heading">Missing Information</h5>
+                            <p class="mb-0">Please enter a valid annual income amount to calculate taxes.</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        const incomeField = document.getElementById("income");
+        if (incomeField) {
+            incomeField.focus();
+            incomeField.classList.add('is-invalid');
+        }
+        
         return;
     }
     
     // Get other values
-    const rent = parseFloat(document.getElementById("rent").value) || 0;
-    const pension = parseFloat(document.getElementById("pension").value) || 0;
-    const nhis = parseFloat(document.getElementById("nhis").value) || 0;
-    const nhf = parseFloat(document.getElementById("nhf").value) || 0;
-    const insurance = parseFloat(document.getElementById("insurance").value) || 0;
-    const crypto = parseFloat(document.getElementById("crypto").value) || 0;
-    const expenses = parseFloat(document.getElementById("expenses").value) || 0;
+    const rent = getNumberValue("rent");
+    const pension = getNumberValue("pension");
+    const nhis = getNumberValue("nhis");
+    const nhf = getNumberValue("nhf");
+    const insurance = getNumberValue("insurance");
+    const crypto = getNumberValue("crypto");
+    const expenses = getNumberValue("expenses");
     
     // Calculate using the new tax law
     const result = calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses);
@@ -287,25 +317,25 @@ function displayResults(result) {
                 <h3 class="text-primary mb-0">
                     <i class="bi bi-file-earmark-text me-2"></i>2026 Tax Report
                 </h3>
-                <span class="badge bg-primary bg-opacity-10 text-primary">
+                <span class="badge bg-primary bg-opacity-10 text-primary fs-6">
                     Effective Rate: ${result.effectiveRate.toFixed(2)}%
                 </span>
             </div>
             
-            <div class="row">
+            <div class="row mb-4">
                 <div class="col-md-6">
                     <div class="card border-0 bg-light h-100">
                         <div class="card-body">
                             <h6 class="text-muted mb-3">INCOME SUMMARY</h6>
-                            <div class="d-flex justify-content-between mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span>Annual Income:</span>
-                                <span class="fw-bold">${formatCurrency(result.income)}</span>
+                                <span class="fw-bold fs-5">${formatCurrency(result.income)}</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span>Taxable Income:</span>
                                 <span class="fw-bold text-primary">${formatCurrency(result.taxable)}</span>
                             </div>
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <span>Total Reliefs:</span>
                                 <span class="fw-bold text-success">${formatCurrency(result.totalReliefs)}</span>
                             </div>
@@ -317,16 +347,16 @@ function displayResults(result) {
                     <div class="card border-0 bg-light h-100">
                         <div class="card-body">
                             <h6 class="text-muted mb-3">TAX DUE</h6>
-                            <div class="d-flex justify-content-between mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span>Income Tax:</span>
                                 <span>${formatCurrency(result.tax)}</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
                                 <span>Crypto Tax:</span>
                                 <span>${formatCurrency(result.cryptoTax)}</span>
                             </div>
                             <hr>
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <span class="fw-bold">Total Tax:</span>
                                 <span class="fw-bold fs-5 text-success">${formatCurrency(result.totalTax)}</span>
                             </div>
@@ -335,9 +365,9 @@ function displayResults(result) {
                 </div>
             </div>
             
-            <div class="tax-breakdown mt-4">
-                <h5><i class="bi bi-pie-chart me-2"></i>Deductions Breakdown</h5>
-                <div class="row mt-3">
+            <div class="tax-breakdown fade-in">
+                <h5 class="mb-3"><i class="bi bi-pie-chart me-2"></i>Deductions Breakdown</h5>
+                <div class="row">
                     <div class="col-md-6">
                         <div class="breakdown-item">
                             <span>Rent Relief:</span>
@@ -374,11 +404,16 @@ function displayResults(result) {
     // Monthly summary
     monthlyDiv.innerHTML = `
         <div class="monthly-summary fade-in">
-            <h4 class="mb-4"><i class="bi bi-calendar-month me-2"></i>Monthly Summary</h4>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0"><i class="bi bi-calendar-month me-2"></i>Monthly Summary</h4>
+                <button class="btn btn-sm btn-outline-primary" onclick="toggleMonthlyDetails()">
+                    <i class="bi bi-chevron-down"></i> Details
+                </button>
+            </div>
             
-            <div class="row text-center">
+            <div class="row text-center" id="monthlyOverview">
                 <div class="col-md-4 mb-3">
-                    <div class="card border-primary">
+                    <div class="card border-primary border-2">
                         <div class="card-body">
                             <h6 class="text-muted">Taxable/Month</h6>
                             <h3 class="text-primary">${formatCurrency(result.monthlyTaxable)}</h3>
@@ -386,7 +421,7 @@ function displayResults(result) {
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <div class="card border-warning">
+                    <div class="card border-warning border-2">
                         <div class="card-body">
                             <h6 class="text-muted">Tax/Month</h6>
                             <h3 class="text-warning">${formatCurrency(result.monthlyTax)}</h3>
@@ -394,10 +429,37 @@ function displayResults(result) {
                     </div>
                 </div>
                 <div class="col-md-4 mb-3">
-                    <div class="card border-success">
+                    <div class="card border-success border-2">
                         <div class="card-body">
                             <h6 class="text-muted">Take Home/Month</h6>
                             <h3 class="text-success">${formatCurrency(result.monthlyTakeHome)}</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="monthlyDetails" style="display: none;">
+                <hr>
+                <h6 class="mb-3">Monthly Breakdown</h6>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="breakdown-item">
+                            <span>Gross Monthly Income:</span>
+                            <span>${formatCurrency(result.income / 12)}</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Monthly Reliefs:</span>
+                            <span>${formatCurrency(result.totalReliefs / 12)}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="breakdown-item">
+                            <span>Monthly Taxable:</span>
+                            <span>${formatCurrency(result.monthlyTaxable)}</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span>Net Monthly Income:</span>
+                            <span class="fw-bold text-success">${formatCurrency(result.monthlyTakeHome)}</span>
                         </div>
                     </div>
                 </div>
@@ -416,8 +478,23 @@ function displayResults(result) {
     
     // Scroll to results
     setTimeout(() => {
-        resultDiv.scrollIntoView({ behavior: 'smooth' });
+        resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, 100);
+}
+
+function toggleMonthlyDetails() {
+    const details = document.getElementById('monthlyDetails');
+    const button = document.querySelector('#monthly button');
+    
+    if (!details || !button) return;
+    
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        button.innerHTML = '<i class="bi bi-chevron-up"></i> Hide Details';
+    } else {
+        details.style.display = 'none';
+        button.innerHTML = '<i class="bi bi-chevron-down"></i> Details';
+    }
 }
 
 function saveCurrentValues() {
@@ -425,7 +502,10 @@ function saveCurrentValues() {
     fields.forEach(id => {
         const field = document.getElementById(id);
         if (field && field.value) {
-            localStorage.setItem(id, field.value);
+            const value = field.value.replace(/,/g, '');
+            if (!isNaN(parseFloat(value))) {
+                localStorage.setItem(id, value);
+            }
         }
     });
 }
@@ -437,6 +517,7 @@ function clearInputs() {
         const field = document.getElementById(id);
         if (field) {
             field.value = '';
+            field.classList.remove('is-valid', 'is-invalid');
             localStorage.removeItem(id);
         }
     });
@@ -446,7 +527,13 @@ function clearInputs() {
     document.getElementById("monthly").innerHTML = '';
     
     // Focus on income
-    document.getElementById("income").focus();
+    const incomeField = document.getElementById("income");
+    if (incomeField) {
+        incomeField.focus();
+    }
+    
+    // Show notification
+    showNotification('All inputs cleared.', 'info');
 }
 
 function setMode(mode) {
@@ -460,11 +547,13 @@ function setMode(mode) {
         if (simpleCard) simpleCard.classList.add('active');
         if (advancedCard) advancedCard.classList.remove('active');
         localStorage.setItem('taxMode', 'simple');
+        showNotification('Simple mode activated. Only income field is required.', 'info');
     } else {
         if (advancedFields) advancedFields.style.display = 'block';
         if (simpleCard) simpleCard.classList.remove('active');
         if (advancedCard) advancedCard.classList.add('active');
         localStorage.setItem('taxMode', 'advanced');
+        showNotification('Advanced mode activated. All fields are available.', 'info');
     }
 }
 
@@ -478,460 +567,47 @@ function updateCurrency() {
         renderBracketTable();
         
         // Recalculate if we have results
-        const income = document.getElementById('income')?.value;
-        if (income && parseFloat(income) > 0) {
+        const resultDiv = document.getElementById('result');
+        if (resultDiv && resultDiv.innerHTML.trim()) {
             calculateTax();
         }
+        
+        showNotification(`Currency updated to ${currencySymbol}`, 'info');
     }
 }
 
+// Simple PDF download (without logo for now)
 function downloadPDF() {
+    const resultDiv = document.getElementById('result');
+    if (!resultDiv || !resultDiv.innerHTML.trim()) {
+        showNotification("Please calculate your tax first before downloading the report.", "warning");
+        return;
+    }
+    
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Get current tax results
-        const resultDiv = document.getElementById('result');
-        if (!resultDiv || !resultDiv.innerHTML.trim()) {
-            showNotification("Please calculate your tax first before downloading the report.", "warning");
-            return;
-        }
+        // Simple PDF content
+        doc.setFontSize(20);
+        doc.setTextColor(42, 92, 154);
+        doc.text('Nigeria 2026 Tax Report', 105, 20, { align: 'center' });
         
-        // Get all input values
-        const getValue = (id) => {
-            const el = document.getElementById(id);
-            return el ? parseFloat(el.value) || 0 : 0;
-        };
-        
-        const income = getValue('income');
-        const rent = getValue('rent');
-        const pension = getValue('pension');
-        const nhis = getValue('nhis');
-        const nhf = getValue('nhf');
-        const insurance = getValue('insurance');
-        const crypto = getValue('crypto');
-        const expenses = getValue('expenses');
-        
-        // Recalculate to get all data (or use stored results if available)
-        const result = calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses);
-        
-        // PDF Styling
-        const primaryColor = [42, 92, 154]; // #2a5c9a
-        const secondaryColor = [30, 132, 73]; // #1e8449
-        const textColor = [50, 50, 50];
-        const lightColor = [240, 240, 240];
-        
-        // ============================================
-        // LOGO HANDLING - Add your logo to PDF
-        // ============================================
-        
-        // Try to load logo from your assets folder
-        const loadLogo = () => {
-            return new Promise((resolve) => {
-                try {
-                    // Create an image element
-                    const img = new Image();
-                    img.crossOrigin = 'Anonymous'; // Handle CORS if needed
-                    
-                    // Try to load the logo
-                    img.src = 'assets/img/webmasLogo.png';
-                    
-                    img.onload = function() {
-                        // Create a canvas to convert the image
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        
-                        // Set canvas dimensions to match image
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        
-                        // Draw image on canvas
-                        ctx.drawImage(img, 0, 0);
-                        
-                        // Get image data URL
-                        const imgData = canvas.toDataURL('image/png');
-                        resolve(imgData);
-                    };
-                    
-                    img.onerror = function() {
-                        console.log("Logo not found or couldn't be loaded");
-                        resolve(null);
-                    };
-                    
-                } catch (error) {
-                    console.log("Error loading logo:", error);
-                    resolve(null);
-                }
-            });
-        };
-        
-        // Function to add logo to PDF
-        const addLogoToPDF = async () => {
-            try {
-                const logoData = await loadLogo();
-                
-                if (logoData) {
-                    // Add logo to the top-left corner
-                    doc.addImage(logoData, 'PNG', 15, 8, 30, 30);
-                    
-                    // Add company name next to logo
-                    doc.setTextColor(...primaryColor);
-                    doc.setFontSize(16);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('NTAX 2026', 50, 20);
-                    
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text('Nigeria Tax Reform Calculator', 50, 27);
-                    
-                    return 45; // Return the Y position after logo section
-                } else {
-                    // Fallback: Create a simple logo placeholder
-                    doc.setFillColor(...primaryColor);
-                    doc.rect(15, 8, 30, 30, 'F');
-                    
-                    doc.setTextColor(255, 255, 255);
-                    doc.setFontSize(14);
-                    doc.setFont('helvetica', 'bold');
-                    doc.text('NT', 30, 25, { align: 'center' });
-                    
-                    // Add company name
-                    doc.setTextColor(...primaryColor);
-                    doc.setFontSize(16);
-                    doc.text('NTAX 2026', 50, 20);
-                    
-                    doc.setFontSize(10);
-                    doc.setFont('helvetica', 'normal');
-                    doc.text('Nigeria Tax Reform Calculator', 50, 27);
-                    
-                    return 45;
-                }
-            } catch (error) {
-                console.log("Could not add logo:", error);
-                
-                // Simple header without logo
-                doc.setFillColor(...primaryColor);
-                doc.rect(0, 0, 210, 30, 'F');
-                
-                doc.setTextColor(255, 255, 255);
-                doc.setFontSize(20);
-                doc.setFont('helvetica', 'bold');
-                doc.text('NTAX 2026', 105, 20, { align: 'center' });
-                
-                doc.setFontSize(10);
-                doc.text('Nigeria Tax Reform Calculator', 105, 27, { align: 'center' });
-                
-                return 35;
-            }
-        };
-        
-        // ============================================
-        // BUILD THE PDF WITH LOGO
-        // ============================================
-        
-        // Add logo and get starting Y position
-        const startY = await addLogoToPDF();
-        
-        // Add date below logo/header
-        doc.setTextColor(150, 150, 150);
-        doc.setFontSize(9);
-        doc.text(`Generated: ${new Date().toLocaleDateString('en-NG', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        })}`, 105, startY + 5, { align: 'center' });
-        
-        // Personal Information
-        doc.setTextColor(...textColor);
         doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('TAX CALCULATION REPORT', 105, startY + 20, { align: 'center' });
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Generated: ${new Date().toLocaleDateString()}`, 20, 40);
         
-        // Income Section
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('ANNUAL INCOME', 20, startY + 35);
+        // Get income
+        const incomeField = document.getElementById('income');
+        const income = incomeField ? parseFloat(incomeField.value.replace(/,/g, '')) || 0 : 0;
         
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${currencySymbol} ${income.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 35, { align: 'right' });
-        
-        // Tax Summary Box
-        doc.setFillColor(...lightColor);
-        doc.rect(20, startY + 45, 170, 60, 'F');
-        
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(12);
-        doc.setTextColor(...primaryColor);
-        doc.text('TAX SUMMARY', 25, startY + 55);
-        
-        // Taxable Income
-        doc.setFontSize(10);
-        doc.setTextColor(...textColor);
-        doc.setFont('helvetica', 'normal');
-        doc.text('Taxable Income:', 25, startY + 65);
-        doc.text(`${currencySymbol} ${result.taxable.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 65, { align: 'right' });
-        
-        // Total Tax Due
-        doc.setFont('helvetica', 'bold');
-        doc.text('Total Tax Due:', 25, startY + 75);
-        doc.setTextColor(...secondaryColor);
-        doc.text(`${currencySymbol} ${result.totalTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 75, { align: 'right' });
-        
-        // Effective Tax Rate
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...textColor);
-        doc.text('Effective Tax Rate:', 25, startY + 85);
-        doc.text(`${result.effectiveRate.toFixed(2)}%`, 180, startY + 85, { align: 'right' });
-        
-        // Monthly Breakdown
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...primaryColor);
-        doc.text('MONTHLY BREAKDOWN', 25, startY + 95);
-        
-        // Monthly values
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...textColor);
-        doc.text('Monthly Taxable:', 25, startY + 105);
-        doc.text(`${currencySymbol} ${result.monthlyTaxable.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 105, { align: 'right' });
-        
-        doc.text('Monthly Tax:', 25, startY + 112);
-        doc.text(`${currencySymbol} ${result.monthlyTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 112, { align: 'right' });
-        
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...secondaryColor);
-        doc.text('Monthly Take Home:', 25, startY + 119);
-        doc.text(`${currencySymbol} ${result.monthlyTakeHome.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, startY + 119, { align: 'right' });
-        
-        // ============================================
-        // PAGE 2: DEDUCTIONS (with logo on header)
-        // ============================================
-        doc.addPage();
-        
-        // Add logo to page 2 header
-        await addLogoToPDF();
-        
-        // Deductions Header
-        doc.setTextColor(255, 255, 255);
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, startY - 10, 210, 20, 'F');
-        
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text('DEDUCTIONS BREAKDOWN', 105, startY, { align: 'center' });
-        
-        // Deductions Table
-        doc.setTextColor(...textColor);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('DEDUCTION TYPE', 25, startY + 25);
-        doc.text('AMOUNT', 180, startY + 25, { align: 'right' });
-        
-        // Line
-        doc.setDrawColor(200, 200, 200);
-        doc.line(25, startY + 28, 185, startY + 28);
-        
-        let yPos = startY + 35;
-        
-        // Rent Relief
-        doc.setFont('helvetica', 'normal');
-        doc.text('Rent Relief (20%):', 25, yPos);
-        doc.text(`${currencySymbol} ${result.rentRelief.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
-        yPos += 8;
-        
-        // Pension Relief
-        doc.text('Pension Contribution:', 25, yPos);
-        doc.text(`${currencySymbol} ${result.pensionRelief.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
-        yPos += 8;
-        
-        // Insurance Relief
-        doc.text('Insurance Premium:', 25, yPos);
-        doc.text(`${currencySymbol} ${result.insuranceRelief.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
-        yPos += 8;
-        
-        // NHIS
-        doc.text('NHIS Contribution:', 25, yPos);
-        doc.text(`${currencySymbol} ${result.nhis.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
-        yPos += 8;
-        
-        // NHF
-        doc.text('NHF Contribution:', 25, yPos);
-        doc.text(`${currencySymbol} ${result.nhf.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
-        yPos += 8;
-        
-        // Business Expenses
-        doc.text('Business Expenses:', 25, yPos);
-        doc.text(`${currencySymbol} ${result.expensesApplied.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
-        yPos += 8;
-        
-        // Crypto Tax
-        if (result.cryptoTax > 0) {
-            doc.text('Crypto Gains Tax (10%):', 25, yPos);
-            doc.text(`${currencySymbol} ${result.cryptoTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
-            yPos += 8;
-        }
-        
-        // Total Reliefs
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...primaryColor);
-        doc.text('TOTAL RELIEFS & DEDUCTIONS:', 25, yPos + 5);
-        doc.text(`${currencySymbol} ${result.totalReliefs.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos + 5, { align: 'right' });
-        
-        // ============================================
-        // PAGE 3: TAX BRACKETS (with logo on header)
-        // ============================================
-        doc.addPage();
-        
-        // Add logo to page 3 header
-        await addLogoToPDF();
-        
-        // Brackets Header
-        doc.setTextColor(255, 255, 255);
-        doc.setFillColor(...primaryColor);
-        doc.rect(0, startY - 10, 210, 20, 'F');
-        
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.text('2026 TAX BRACKETS', 105, startY, { align: 'center' });
-        
-        // Brackets Table
-        doc.setTextColor(...textColor);
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        
-        // Table Headers
-        doc.text('INCOME RANGE', 25, startY + 25);
-        doc.text('RATE', 150, startY + 25);
-        doc.text('EXAMPLE TAX', 180, startY + 25, { align: 'right' });
-        
-        // Line
-        doc.line(25, startY + 28, 185, startY + 28);
-        
-        yPos = startY + 35;
-        
-        // Display brackets
-        taxBrackets.forEach((bracket, index) => {
-            const maxDisplay = bracket.max === Infinity ? 'and above' : 
-                `${currencySymbol} ${bracket.max.toLocaleString('en-NG', {minimumFractionDigits: 2})}`;
-            
-            doc.setFont('helvetica', 'normal');
-            doc.text(`${currencySymbol} ${bracket.min.toLocaleString('en-NG', {minimumFractionDigits: 2})} - ${maxDisplay}`, 25, yPos);
-            doc.text(`${(bracket.rate * 100).toFixed(1)}%`, 150, yPos);
-            
-            // Calculate example tax for this bracket
-            const exampleIncome = bracket.max === Infinity ? 
-                Math.max(bracket.min * 2, 10000000) : 
-                (bracket.min + bracket.max) / 2;
-            
-            let exampleTax = 0;
-            let remaining = exampleIncome;
-            
-            for (const b of taxBrackets) {
-                if (remaining > b.min) {
-                    const amountInBracket = Math.min(remaining, b.max) - b.min;
-                    if (amountInBracket > 0) {
-                        exampleTax += amountInBracket * b.rate;
-                    }
-                }
-            }
-            
-            doc.text(`${currencySymbol} ${exampleTax.toLocaleString('en-NG', {minimumFractionDigits: 2})}`, 180, yPos, { align: 'right' });
-            
-            yPos += 7;
-        });
-        
-        // ============================================
-        // PAGE 4: DISCLAIMER (with logo on header)
-        // ============================================
-        doc.addPage();
-        
-        // Add logo to page 4 header
-        await addLogoToPDF();
-        
-        // Disclaimer Section
-        doc.setFillColor(245, 245, 245);
-        doc.rect(10, startY + 10, 190, 180, 'F');
-        
-        doc.setTextColor(100, 100, 100);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('IMPORTANT DISCLAIMER', 105, startY + 40, { align: 'center' });
-        
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        
-        const disclaimer = [
-            'This tax calculation report is provided for informational purposes only.',
-            'It is based on the proposed Nigeria Tax Reform 2026 legislation and',
-            'should not be considered as professional tax advice.',
-            '',
-            'Key Points to Note:',
-            '• Minimum taxable income: ₦800,000',
-            '• Rent relief: 20% of rent paid or ₦500,000 maximum',
-            '• Pension relief: ₦200,000 maximum',
-            '• Insurance relief: ₦100,000 maximum',
-            '• Business expenses: Maximum of 30% of income',
-            '• Crypto gains tax: 10% on profits only',
-            '• NHIS & NHF contributions are fully deductible',
-            '',
-            'The actual tax liability may vary based on:',
-            '• Final legislation passed by the National Assembly',
-            '• Individual circumstances and documentation',
-            '• FIRS guidelines and interpretations',
-            '• State-level taxes and levies',
-            '',
-            'For official tax advice and filing, please consult:',
-            '• A certified tax professional',
-            '• Federal Inland Revenue Service (FIRS)',
-            '• State Internal Revenue Service',
-            '',
-            'Generated by NTAX 2026 Calculator',
-            'https://your-website-url.com'
-        ];
-        
-        let disclaimerY = startY + 60;
-        disclaimer.forEach(line => {
-            if (line.startsWith('•')) {
-                doc.text('  ' + line, 30, disclaimerY);
-            } else if (line.includes(':')) {
-                doc.setFont('helvetica', 'bold');
-                doc.text(line, 105, disclaimerY, { align: 'center' });
-                doc.setFont('helvetica', 'normal');
-            } else {
-                doc.text(line, 105, disclaimerY, { align: 'center' });
-            }
-            disclaimerY += 7;
-        });
-        
-        // Add logo at the bottom of disclaimer page
-        try {
-            const logoData = await loadLogo();
-            if (logoData) {
-                doc.addImage(logoData, 'PNG', 85, disclaimerY + 20, 40, 40);
-            }
-        } catch (error) {
-            // If logo fails, add text version
-            doc.setFillColor(...primaryColor);
-            doc.rect(85, disclaimerY + 20, 40, 40, 'F');
-            
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(18);
-            doc.setFont('helvetica', 'bold');
-            doc.text('NT', 105, disclaimerY + 40, { align: 'center' });
-        }
-        
-        // Add footer with your website
-        doc.setTextColor(150, 150, 150);
-        doc.setFontSize(8);
-        doc.text('© 2024 NTAX Calculator. All rights reserved.', 105, 280, { align: 'center' });
-        doc.text('www.yourwebsite.com | contact@yourwebsite.com', 105, 285, { align: 'center' });
+        doc.text(`Annual Income: ${formatCurrency(income)}`, 20, 60);
         
         // Save PDF
-        const fileName = `Nigeria_Tax_2026_Report_${new Date().toISOString().split('T')[0]}.pdf`;
+        const fileName = `Nigeria_Tax_2026_Report_${Date.now()}.pdf`;
         doc.save(fileName);
         
-        showNotification('Comprehensive PDF report downloaded successfully!', 'success');
+        showNotification('PDF report downloaded successfully!', 'success');
         
     } catch (error) {
         console.error('PDF generation error:', error);
@@ -940,18 +616,18 @@ function downloadPDF() {
 }
 
 function shareWhatsApp() {
-    const income = document.getElementById('income')?.value;
-    if (!income || parseFloat(income) <= 0) {
-       showNotification("Please calculate your tax first before sharing.", "warning");
+    const resultDiv = document.getElementById('result');
+    if (!resultDiv || !resultDiv.innerHTML.trim()) {
+        showNotification("Please calculate your tax first before sharing.", "warning");
         return;
     }
     
-    const text = "Check out this Nigeria 2026 Tax Calculator! " + window.location.href;
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, '_blank');
+    const text = `Check out the Nigeria 2026 Tax Calculator! I just projected my taxes under the new law. Try it for yourself: ${window.location.href}`;
+    const encodedText = encodeURIComponent(text);
+    const url = `https://wa.me/?text=${encodedText}`;
+    
+    window.open(url, '_blank', 'noopener,noreferrer');
 }
-
-// ... [all your existing code above] ...
 
 function fillSampleData() {
     // Clear first
@@ -967,14 +643,11 @@ function fillSampleData() {
     document.getElementById('crypto').value = '100000';
     document.getElementById('expenses').value = '600000';
     
-    // Use showNotification instead of alert
+    // Show notification
     showNotification('Sample data loaded. Click "Calculate Tax" to see results.', 'info');
 }
 
-// ============================================
-// NOTIFICATION FUNCTION - ADD THIS AT THE BOTTOM
-// ============================================
-
+// Notification function
 function showNotification(message, type = 'info') {
     // Create notification element
     const notification = document.createElement('div');
@@ -1049,10 +722,7 @@ function showNotification(message, type = 'info') {
     });
 }
 
-// ============================================
-// MAKE ALL FUNCTIONS GLOBALLY AVAILABLE
-// ============================================
-
+// Make all functions globally available
 window.calculateTax = calculateTax;
 window.clearInputs = clearInputs;
 window.setMode = setMode;
@@ -1061,5 +731,4 @@ window.downloadPDF = downloadPDF;
 window.shareWhatsApp = shareWhatsApp;
 window.fillSampleData = fillSampleData;
 window.showNotification = showNotification;
-
-
+window.toggleMonthlyDetails = toggleMonthlyDetails;
