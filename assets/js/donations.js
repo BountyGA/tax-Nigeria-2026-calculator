@@ -1,5 +1,6 @@
 console.log('✅ donations.js loaded successfully!');
 console.log('showDonationOptions function exists:', typeof showDonationOptions === 'function');
+
 let selectedAmount = 1000; // Default amount
 
 function showDonationOptions() {
@@ -68,12 +69,19 @@ function processDonation() {
 
 // Flutterwave Payment Integration
 function makeFlutterwavePayment(amount) {
-    // Replace with your actual Flutterwave public key
+    console.log('Starting Flutterwave payment for amount:', amount);
+    
+    // Check if Flutterwave is loaded
+    if (typeof FlutterwaveCheckout === 'undefined') {
+        alert('Payment service not available. Please refresh the page.');
+        return;
+    }
+    
     const FLW_PUBLIC_KEY = 'FLWPUBK_TEST-8fba06d0c4afaadbc8b0a0764e93994a-X';
     
     FlutterwaveCheckout({
         public_key: FLW_PUBLIC_KEY,
-        tx_ref: 'NGTAX-CALCULATOR' + Date.now(),
+        tx_ref: 'NGTAX-CALCULATOR-' + Date.now(),
         amount: amount,
         currency: 'NGN',
         payment_options: 'card, banktransfer, ussd',
@@ -84,33 +92,39 @@ function makeFlutterwavePayment(amount) {
         customizations: {
             title: 'NGTaxCalculator Donation',
             description: 'Support for Free Web Tools',
-            logo: 'https://your-logo-url.com/logo.png'
+            logo: 'https://ngtaxcalculator.online/assets/img/webmasLogo.png' // FIXED: Use your actual logo
         },
         callback: function(response) {
+            console.log('Flutterwave callback:', response);
+            
             // Handle successful payment
             if (response.status === 'successful') {
-                $('#donationModal').modal('hide');
+                // Close modal using Bootstrap 5 (FIXED: Removed jQuery)
+                const modalElement = document.getElementById('donationModal');
+                if (modalElement) {
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) {
+                        modal.hide();
+                    }
+                }
+                
                 showThankYouMessage(response.transaction_id, amount);
                 
                 // You can send payment data to your server here
                 // sendPaymentDataToServer(response);
+            } else {
+                alert('Payment not completed. Status: ' + response.status);
             }
         },
         onclose: function() {
-            // Handle modal close
-            console.log('Payment modal closed');
+            console.log('Payment modal closed by user');
         }
     });
 }
 
 function showThankYouMessage(transactionId, amount) {
-    alert(`Thank you for your donation of ₦${amount}! Transaction ID: ${transactionId}`);
-    
-    // Or show a more beautiful modal:
-    /*
-    const thankyouModal = new bootstrap.Modal(document.getElementById('thankyouModal'));
-    document.getElementById('donationAmount').textContent = amount;
-    document.getElementById('transactionId').textContent = transactionId;
-    thankyouModal.show();
-    */
+    alert(`Thank you for your donation of ₦${amount}!\nTransaction ID: ${transactionId}\n\nA receipt has been sent to your email.`);
 }
+
+// Remove jQuery dependency - this is no longer needed
+// Remove any $ signs from the code
