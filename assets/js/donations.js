@@ -2,9 +2,22 @@ console.log('✅ donations.js loaded successfully!');
 console.log('showDonationOptions function exists:', typeof showDonationOptions === 'function');
 
 let selectedAmount = 1000; // Default amount
+let selectedButton = null; // Track selected button
 
 function showDonationOptions() {
     console.log('Opening donation modal...');
+    
+    // Reset selections
+    selectedAmount = 1000;
+    selectedButton = null;
+    document.getElementById('customAmountSection').style.display = 'none';
+    document.getElementById('donateButton').style.display = 'none';
+    
+    // Reset all buttons
+    document.querySelectorAll('.donation-amount').forEach(btn => {
+        btn.classList.remove('active', 'btn-success');
+        btn.classList.add('btn-outline-success');
+    });
     
     // Use Bootstrap 5 native modal
     const donationModal = document.getElementById('donationModal');
@@ -20,11 +33,16 @@ function showDonationOptions() {
 
 function showCustomAmount() {
     document.getElementById('customAmountSection').style.display = 'block';
+    document.getElementById('donateButton').style.display = 'block';
+    
     // Reset selected amount when choosing custom
     document.querySelectorAll('.donation-amount').forEach(btn => {
         btn.classList.remove('active', 'btn-success');
         btn.classList.add('btn-outline-success');
     });
+    
+    selectedButton = null;
+    selectedAmount = null;
 }
 
 // Handle amount selection
@@ -41,17 +59,22 @@ document.addEventListener('DOMContentLoaded', function() {
             this.classList.remove('btn-outline-success');
             this.classList.add('btn-success', 'active');
             
-            // Store selected amount
+            // Store selected amount and button
             selectedAmount = this.getAttribute('data-amount');
+            selectedButton = this;
             
             // Hide custom amount section
             document.getElementById('customAmountSection').style.display = 'none';
+            
+            // Show donate button
+            document.getElementById('donateButton').style.display = 'block';
         });
     });
 });
 
 function processDonation() {
     let amount = selectedAmount;
+    let userEmail = document.getElementById('donorEmail').value;
     
     // Check if custom amount is being used
     const customAmount = document.getElementById('customAmount').value;
@@ -63,13 +86,24 @@ function processDonation() {
         }
     }
     
+    // Validate email if provided
+    if (userEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(userEmail)) {
+            alert('Please enter a valid email address');
+            return;
+        }
+    } else {
+        userEmail = 'user@example.com'; // Fallback email
+    }
+    
     // Initialize Flutterwave payment
-    makeFlutterwavePayment(amount);
+    makeFlutterwavePayment(amount, userEmail);
 }
 
 // Flutterwave Payment Integration
-function makeFlutterwavePayment(amount) {
-    console.log('Starting Flutterwave payment for amount:', amount);
+function makeFlutterwavePayment(amount, userEmail) {
+    console.log('Starting Flutterwave payment for amount:', amount, 'Email:', userEmail);
     
     // Check if Flutterwave is loaded
     if (typeof FlutterwaveCheckout === 'undefined') {
@@ -81,34 +115,33 @@ function makeFlutterwavePayment(amount) {
     
     FlutterwaveCheckout({
         public_key: FLW_PUBLIC_KEY,
-        tx_ref: 'NGTAX-CALCULATOR-' + Date.now(),
+        tx_ref: 'NGTAX-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9),
         amount: amount,
         currency: 'NGN',
         payment_options: 'card, banktransfer, ussd',
         customer: {
-            email: 'user@example.com', // You can collect this from user
+            email: userEmail,
             name: 'Donor'
         },
         customizations: {
             title: 'NGTaxCalculator Donation',
-            description: 'Support for Free Web Tools',
-            logo: 'https://ngtaxcalculator.online/assets/img/webmasLogo.png' // FIXED: Use your actual logo
+            description: 'Support for Free Tax Calculator Tool',
+            logo: 'https://ngtaxcalculator.online/assets/img/webmasLogo.png'
         },
         callback: function(response) {
             console.log('Flutterwave callback:', response);
             
             // Handle successful payment
             if (response.status === 'successful') {
-                // Close modal using Bootstrap 5 (FIXED: Removed jQuery)
-                const modalElement = document.getElementById('donationModal');
-                if (modalElement) {
-                    const modal = bootstrap.Modal.getInstance(modalElement);
-                    if (modal) {
-                        modal.hide();
-                    }
+                // Close donation modal
+                const donationModal = document.getElementById('donationModal');
+                if (donationModal) {
+                    const modal = bootstrap.Modal.getInstance(donationModal);
+                    if (modal) modal.hide();
                 }
                 
-                showThankYouMessage(response.transaction_id, amount);
+                // Show thank you modal
+                showThankYouModal(response.transaction_id, amount, userEmail);
                 
                 // You can send payment data to your server here
                 // sendPaymentDataToServer(response);
@@ -122,9 +155,27 @@ function makeFlutterwavePayment(amount) {
     });
 }
 
-function showThankYouMessage(transactionId, amount) {
-    alert(`Thank you for your donation of ₦${amount}!\nTransaction ID: ${transactionId}\n\nA receipt has been sent to your email.`);
+function showThankYouModal(transactionId, amount, email) {
+    // Update modal content
+    document.getElementById('thankYouAmount').textContent = amount;
+    document.getElementById('thankYouTransactionId').textContent = transactionId;
+    document.getElementById('thankYouEmail').textContent = email;
+    
+    // Show the thank you modal
+    const thankyouModal = new bootstrap.Modal(document.getElementById('thankyouModal'));
+    thankyouModal.show();
 }
 
-// Remove jQuery dependency - this is no longer needed
-// Remove any $ signs from the code
+// Helper function to copy transaction ID
+function copyTransactionId() {
+    const transactionId = document.getElementById('thankYouTransactionId').textContent;
+    navigator.clipboard.writeText(transactionId).then(() => {
+        alert('Transaction ID copied to clipboard!');
+    });
+}
+
+// Test function
+window.testDonation = function() {
+    console.log('=== Testing Donation System ===');
+    showDonationOptions();
+};
