@@ -344,14 +344,13 @@ function calculateTax() {
     // Save current values
     saveCurrentValues();
     
-    // Show success notification
-    showNotification('Tax calculation completed successfully!', 'success');
+    // MONETIZATION: Trigger ads after successful calculation
+    if (window.loadAdsAfterCalculation) {
+        window.loadAdsAfterCalculation();
+    }
     
     // FEATURE: Auto scroll to results section
     scrollToSection('result');
-
-     // MONETIZATION: Show ads after user engagement
-    showAdsAfterCalculation();
 }
 
 function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses) {
@@ -584,9 +583,7 @@ function displayResults(result) {
             </div>
         </div>
     `;
-    
-    // Scroll to results - Updated to use the new function
-    scrollToSection('result');
+
 }
 
 function toggleMonthlyDetails() {
