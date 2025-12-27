@@ -406,177 +406,242 @@
             animation: fadeIn 0.5s ease-out;
         }
 
-        /* Timeline Styles */
-.timeline {
-    position: relative;
-    padding-left: 30px;
-}
-
-.timeline::before {
-    content: '';
-    position: absolute;
-    left: 15px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: var(--primary-color);
-    opacity: 0.3;
-}
-
-.timeline-item {
-    position: relative;
-    margin-bottom: 30px;
-}
-
-.timeline-item:last-child {
-    margin-bottom: 0;
-}
-
-.timeline-item::before {
-    content: '';
-    position: absolute;
-    left: -28px;
-    top: 5px;
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    border: 3px solid white;
-    box-shadow: 0 0 0 3px rgba(42, 92, 154, 0.2);
-}
-
-.timeline-date {
-    font-weight: 600;
-    color: var(--primary-color);
-    margin-bottom: 5px;
-}
-
-.timeline-content {
-    background: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    border-left: 3px solid var(--primary-color);
-}
-
-.timeline-content h6 {
-    color: var(--dark-bg);
-    margin-bottom: 5px;
-}
-
-.timeline-content p {
-    margin-bottom: 0;
-    font-size: 0.9rem;
-    color: #666;
-}
-
-/* FAQ Styles */
-.accordion-button:not(.collapsed) {
-    background-color: rgba(42, 92, 154, 0.1);
-    color: var(--primary-color);
-    font-weight: 600;
-}
-
-.accordion-button:focus {
-    box-shadow: 0 0 0 0.25rem rgba(42, 92, 154, 0.25);
-    border-color: var(--primary-color);
-}
-
-/* Contact Form Styles */
-.form-control:focus, .form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(42, 92, 154, 0.15);
-}
-
-/* Privacy Policy Styles */
-.privacy-section {
-    margin-bottom: 2rem;
-}
-
-.privacy-section h6 {
-    color: var(--primary-color);
-    border-bottom: 2px solid rgba(42, 92, 154, 0.1);
-    padding-bottom: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-/* Back to Calculator Button */
-.back-to-calc {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 1000;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-/* Add to your existing CSS */
-.donation-amount.active {
-    transform: scale(1.05);
-    box-shadow: 0 5px 15px rgba(25, 135, 84, 0.3);
-}
-
-.font-monospace {
-    font-family: 'Courier New', Courier, monospace;
-    background-color: #f8f9fa;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.9em;
-}
-
-#donateButton {
-    animation: fadeIn 0.3s ease-in;
-}
-
-/* Add to your existing CSS */
-/* Toast Notifications */
-.toast {
-    background-color: #28a745;
-    color: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-/* Email Validation */
-.has-error .form-control {
-    border-color: #dc3545;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right calc(.375em + .1875rem) center;
-    background-size: calc(.75em + .375rem) calc(.75em + .375rem);
-}
-
-.has-error .form-text {
-    color: #dc3545;
-}
-
-/* Loading States */
-.spinner-border {
-    vertical-align: middle;
-}
-
-/* Accessibility */
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-/* Responsive modal adjustments */
-@media (max-width: 576px) {
-    .donation-amount {
-        padding: 0.75rem 0.5rem;
-        font-size: 0.9rem;
-    }
-    
-    #donateButton button {
-        padding: 0.75rem !important;
-        font-size: 1rem;
-    }
-}
+                /* Timeline Styles */
+        .timeline {
+            position: relative;
+            padding-left: 30px;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--primary-color);
+            opacity: 0.3;
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .timeline-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -28px;
+            top: 5px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            border: 3px solid white;
+            box-shadow: 0 0 0 3px rgba(42, 92, 154, 0.2);
+        }
+        
+        .timeline-date {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+        
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .timeline-content h6 {
+            color: var(--dark-bg);
+            margin-bottom: 5px;
+        }
+        
+        .timeline-content p {
+            margin-bottom: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        /* FAQ Styles */
+        .accordion-button:not(.collapsed) {
+            background-color: rgba(42, 92, 154, 0.1);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .accordion-button:focus {
+            box-shadow: 0 0 0 0.25rem rgba(42, 92, 154, 0.25);
+            border-color: var(--primary-color);
+        }
+        
+        /* Form Styles */
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.25rem rgba(42, 92, 154, 0.15);
+        }
+        
+        /* Privacy Policy Styles */
+        .privacy-section {
+            margin-bottom: 2rem;
+        }
+        
+        .privacy-section h6 {
+            color: var(--primary-color);
+            border-bottom: 2px solid rgba(42, 92, 154, 0.1);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Back to Calculator Button */
+        .back-to-calc {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        /* Add to your existing CSS */
+        .donation-amount.active {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(25, 135, 84, 0.3);
+        }
+        
+        .font-monospace {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        #donateButton {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        /* Add to your existing CSS */
+        /* Toast Notifications */
+        .toast {
+            background-color: #28a745;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        /* Email Validation */
+        .has-error .form-control {
+            border-color: #dc3545;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' width='12' height='12' fill='none' stroke='%23dc3545'%3e%3ccircle cx='6' cy='6' r='4.5'/%3e%3cpath stroke-linejoin='round' d='M5.8 3.6h.4L6 6.5z'/%3e%3ccircle cx='6' cy='8.2' r='.6' fill='%23dc3545' stroke='none'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right calc(.375em + .1875rem) center;
+            background-size: calc(.75em + .375rem) calc(.75em + .375rem);
+        }
+        
+        .has-error .form-text {
+            color: #dc3545;
+        }
+        
+        /* Loading States */
+        .spinner-border {
+            vertical-align: middle;
+        }
+        
+        /* Accessibility */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Responsive modal adjustments */
+        @media (max-width: 576px) {
+            .donation-amount {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.9rem;
+            }
+            
+            #donateButton button {
+                padding: 0.75rem !important;
+                font-size: 1rem;
+            }
+        }
+        
+                /* Ad Styling */
+        #ad-banner-1, #ad-banner-2, #ad-native {
+            min-height: 90px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            overflow: hidden;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        
+        #ad-banner-2 {
+            min-height: 250px;
+            max-width: 300px;
+        }
+        
+        /* Native ad container */
+        #ad-native {
+            min-height: 100px;
+            background: transparent;
+            border: none;
+        }
+        
+        /* Ad label */
+        .text-muted.small.mt-2 {
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+        
+        /* Responsive ads */
+        @media (max-width: 768px) {
+            #ad-banner-1 {
+                min-height: 100px;
+                max-width: 100%;
+            }
+            
+            #ad-banner-2 {
+                min-height: 250px;
+                max-width: 300px;
+            }
+            
+            #ad-native {
+                min-height: 120px;
+            }
+        }
+        
+        /* Hide empty ad containers */
+        #ad-banner-1:empty,
+        #ad-banner-2:empty,
+        #ad-native:empty {
+            display: none;
+        }
+        
+        /* Ad blocker message */
+        .alert-info {
+            background-color: rgba(13, 110, 253, 0.1);
+            border-color: rgba(13, 110, 253, 0.2);
+            font-size: 0.9rem;
+        }
+        
+        .alert-info a {
+            color: #0d6efd;
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
@@ -657,6 +722,14 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Native Ads -->
+        <div class="container mt-4 mb-4 text-center">
+            <div id="ad-native">
+                <!-- Native ad will load here -->
+            </div>
+            <p class="text-muted small mt-2">Advertisement</p>
         </div>
 
         <!-- Calculator Card -->
@@ -890,6 +963,14 @@
         </div>
     </div>
 
+    <!-- Big Ad (Leaderboard Ad) -->
+    <div class="container mt-4 mb-4 text-center">
+        <div id="ad-banner-1">
+            <!-- 728x90 Leaderboard will load here -->
+        </div>
+        <p class="text-muted small mt-2">Advertisement</p>
+    </div>
+
     <!-- Add these buttons after the Features section -->
 <div class="text-center mt-4 mb-4">
     <button class="btn btn-outline-info me-2" data-scroll-to="brackets">
@@ -925,6 +1006,14 @@
             </div>
         </div>
     </div>
+</div>
+    
+    <!-- Last Ad -->
+<div class="container mt-4 mb-4 text-center">
+    <div id="ad-banner-2">
+        <!-- 300x250 Rectangle will load here -->
+    </div>
+    <p class="text-muted small mt-2">Advertisement</p>
 </div>
     
     <!-- Footer -->
@@ -1008,6 +1097,37 @@
     <script src="assets/js/calculator.js"></script>
     <!-- Navigation and Pages Script -->
     <script src="assets/js/navigation.js"></script>
+    <!-- Ads Management -->
+    <script src="assets/js/ads.js"></script>
+
+    <!-- ADSTERRA POPUNDER - AT THE VERY BOTTOM -->
+   <script>
+        // Only show after user interaction
+        document.addEventListener('DOMContentLoaded', function() {
+            let adShown = false;
+            
+            // Show after calculator usage
+            window.showAdAfterCalculation = function() {
+                if (!adShown) {
+                    setTimeout(() => {
+                        // Your Adsterra code here
+                        const script = document.createElement('script');
+                        script.src = "https://pl28337879.effectivegatecpm.com/d6/93/ca/d693ca1b110bcf1c2682b5b156ece355.js";
+                        document.body.appendChild(script);
+                        adShown = true;
+                    }, 2000); // 2-second delay
+                }
+            };
+            
+            // Trigger on calculator usage
+            const calculateBtn = document.getElementById('calcBtn');
+            if (calculateBtn) {
+                calculateBtn.addEventListener('click', function() {
+                    setTimeout(() => showAdAfterCalculation(), 3000);
+                });
+            }
+        });
+    </script> -->
     
 <!-- Social Sharing Modal -->
 <div class="modal fade" id="shareModal" tabindex="-1">
