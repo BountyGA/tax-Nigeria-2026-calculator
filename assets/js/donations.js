@@ -1,9 +1,20 @@
-// Add this script after your modal HTML or in a separate JS file
-
+console.log('✅ donations.js loaded successfully!');
+console.log('showDonationOptions function exists:', typeof showDonationOptions === 'function');
 let selectedAmount = 1000; // Default amount
 
 function showDonationOptions() {
-    $('#donationModal').modal('show');
+    console.log('Opening donation modal...');
+    
+    // Use Bootstrap 5 native modal
+    const donationModal = document.getElementById('donationModal');
+    if (donationModal) {
+        const modal = new bootstrap.Modal(donationModal);
+        modal.show();
+        console.log('Modal shown using Bootstrap 5');
+    } else {
+        console.error('Donation modal element not found!');
+        alert('Error: Could not open donation modal.');
+    }
 }
 
 function showCustomAmount() {
