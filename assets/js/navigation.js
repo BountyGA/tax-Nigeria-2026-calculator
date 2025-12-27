@@ -12,9 +12,6 @@ function showInfo(pageType) {
         case 'guide':
             downloadPDF();
             return; // Don't scroll for PDF download
-        case 'contact':
-            showContactPage();
-            break;
         case 'privacy':
             showPrivacyPage();
             break;
@@ -237,117 +234,14 @@ function showFAQPage() {
                                 <li><strong>Chartered Institute of Taxation of Nigeria</strong>: Visit <a href="https://www.citn.org" target="_blank">www.citn.org</a></li>
                                 <li><strong>Association of National Accountants of Nigeria</strong></li>
                             </ul>
-                            <p class="mb-0">For quick questions, use our <a href="#" onclick="showInfo('contact')">Contact Tax Advisor</a> form.</p>
-                        </div>
+                         <p class="mb-0">For official tax advice, consult certified tax professionals or FIRS directly.</p>       </div>
                     </div>
                 </div>
             </div>
             
             <div class="alert alert-info mt-4">
                 <h6><i class="bi bi-chat-left-text me-2"></i>Still have questions?</h6>
-                <p class="mb-0">Email us at <strong>support@taxcalc.ng</strong> or use the contact form for personalized assistance.</p>
-            </div>
-        </div>
-    `;
-    
-    monthlyDiv.innerHTML = '';
-}
-
-function showContactPage() {
-    const resultDiv = document.getElementById("result");
-    const monthlyDiv = document.getElementById("monthly");
-    
-    if (!resultDiv || !monthlyDiv) return;
-    
-    resultDiv.innerHTML = `
-        <div class="result-card fade-in">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="text-primary mb-0">
-                    <i class="bi bi-person-lines-fill me-2"></i>Contact Tax Advisor
-                </h3>
-                <button class="btn btn-outline-secondary" onclick="showInfo('faq')">
-                    <i class="bi bi-arrow-left me-2"></i>Back to FAQ
-                </button>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="bi bi-info-circle me-2"></i>Get Professional Tax Advice</h5>
-                            <p class="card-text">Connect with certified tax professionals who can provide personalized advice based on your specific situation.</p>
-                            
-                            <div class="mt-4">
-                                <h6><i class="bi bi-check-circle text-success me-2"></i>What we offer:</h6>
-                                <ul class="list-unstyled">
-                                    <li class="mb-2"><i class="bi bi-dot text-primary"></i> Personal tax planning consultation</li>
-                                    <li class="mb-2"><i class="bi bi-dot text-primary"></i> Business tax optimization strategies</li>
-                                    <li class="mb-2"><i class="bi bi-dot text-primary"></i> Documentation review and verification</li>
-                                    <li class="mb-2"><i class="bi bi-dot text-primary"></i> FIRS compliance guidance</li>
-                                    <li><i class="bi bi-dot text-primary"></i> Annual tax filing assistance</li>
-                                </ul>
-                            </div>
-                            
-                            <div class="alert alert-warning mt-4">
-                                <small><i class="bi bi-exclamation-triangle me-1"></i><strong>Important:</strong> This service connects you with third-party tax professionals. NTAX is not responsible for advice given.</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="card border-0 shadow-sm h-100">
-                        <div class="card-body">
-                            <h5 class="card-title"><i class="bi bi-envelope me-2"></i>Contact Form</h5>
-                            <p class="text-muted">Fill out this form and we'll connect you with a qualified tax advisor within 24 hours.</p>
-                            
-                            <form id="contactForm" onsubmit="submitContactForm(event)">
-                                <div class="mb-3">
-                                    <label for="contactName" class="form-label">Full Name *</label>
-                                    <input type="text" class="form-control" id="contactName" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="contactEmail" class="form-label">Email Address *</label>
-                                    <input type="email" class="form-control" id="contactEmail" required>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="contactPhone" class="form-label">Phone Number</label>
-                                    <input type="tel" class="form-control" id="contactPhone">
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="contactIncome" class="form-label">Annual Income Range</label>
-                                    <select class="form-select" id="contactIncome">
-                                        <option selected>Select range</option>
-                                        <option value="under-1m">Under ₦1 million</option>
-                                        <option value="1m-5m">₦1M - ₦5 million</option>
-                                        <option value="5m-10m">₦5M - ₦10 million</option>
-                                        <option value="10m-50m">₦10M - ₦50 million</option>
-                                        <option value="over-50m">Over ₦50 million</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="mb-3">
-                                    <label for="contactQuery" class="form-label">Your Tax Question *</label>
-                                    <textarea class="form-control" id="contactQuery" rows="4" required placeholder="Describe your tax situation or question..."></textarea>
-                                </div>
-                                
-                                <div class="mb-3 form-check">
-                                    <input type="checkbox" class="form-check-input" id="contactConsent" required>
-                                    <label class="form-check-label" for="contactConsent">
-                                        I agree to be contacted by tax professionals via email/phone
-                                    </label>
-                                </div>
-                                
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-send me-2"></i>Submit Request
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+                <p class="mb-0">Email us at <strong>gabrielbounty19@gmail.com</strong> for website support questions only.</p>    
             </div>
         </div>
     `;
@@ -406,8 +300,8 @@ function showPrivacyPage() {
                     <h6 class="mt-4"><i class="bi bi-chat-dots text-primary me-2"></i>Contact Information</h6>
                     <p>If you have privacy concerns or questions:</p>
                     <ul>
-                        <li>Email: privacy@taxcalc.ng</li>
-                        <li>Data Protection Officer: dpo@taxcalc.ng</li>
+                       <li>Email: gabrielbounty19@gmail.com</li>
+                       <li>For privacy questions only - not for tax advice</li>
                     </ul>
                     
                     <div class="alert alert-info mt-4">
@@ -422,26 +316,6 @@ function showPrivacyPage() {
     `;
     
     monthlyDiv.innerHTML = '';
-}
-
-function submitContactForm(event) {
-    event.preventDefault();
-    
-    // Get form values
-    const name = document.getElementById('contactName').value;
-    const email = document.getElementById('contactEmail').value;
-    const query = document.getElementById('contactQuery').value;
-    
-    // Simulate form submission
-    showNotification('Thank you, ' + name + '! Your request has been submitted. A tax advisor will contact you within 24 hours.', 'success');
-    
-    // Clear form
-    document.getElementById('contactForm').reset();
-    
-    // Return to calculator after 3 seconds
-    setTimeout(() => {
-        showCalculator();
-    }, 3000);
 }
 
 function showCalculator() {
@@ -531,7 +405,7 @@ function showDisclaimer() {
                 <button class="btn btn-primary" onclick="showCalculator()">
                     <i class="bi bi-calculator me-2"></i>Back to Calculator
                 </button>
-                <a href="mailto:legal@webmas.com" class="btn btn-outline-secondary ms-2">
+                <a href="mailto:gabrielbounty19@gmail.com" class="btn btn-outline-secondary ms-2">
                     <i class="bi bi-envelope me-2"></i>Legal Questions
                 </a>
             </div>
@@ -546,4 +420,3 @@ function showDisclaimer() {
 // Make functions globally available
 window.showInfo = showInfo;
 window.showCalculator = showCalculator;
-window.submitContactForm = submitContactForm;
