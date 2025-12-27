@@ -66,6 +66,18 @@ window.onload = function() {
     
     // Add scroll-to functionality to key buttons
     addScrollToFunctionality();
+
+     // AUTO-SCROLL TO INCOME INPUT FIELD
+    setTimeout(() => {
+        const incomeField = document.getElementById('income');
+        if (incomeField) {
+            incomeField.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+            });
+            incomeField.focus(); // Also focus on the field
+        }
+    }, 800);
 };
 
 // Add scroll-to functionality to key buttons
@@ -76,7 +88,17 @@ function addScrollToFunctionality() {
         if (startCalcBtn) {
             startCalcBtn.addEventListener('click', function(e) {
                 e.preventDefault();
-                scrollToSection('calculatorForm');
+                // Scroll to income field specifically
+                const incomeField = document.getElementById('income');
+                if (incomeField) {
+                    incomeField.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                    incomeField.focus();
+                } else {
+                    scrollToSection('calculatorForm');
+                }
             });
         }
         
@@ -89,12 +111,19 @@ function addScrollToFunctionality() {
             });
         }
         
-        // Make sample data button scroll to results
+        // Make sample data button scroll to income field
         const sampleBtn = document.querySelector('button[onclick*="fillSampleData"]');
         if (sampleBtn) {
             sampleBtn.addEventListener('click', function() {
                 setTimeout(() => {
-                    document.getElementById('income').focus();
+                    const incomeField = document.getElementById('income');
+                    if (incomeField) {
+                        incomeField.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center' 
+                        });
+                        incomeField.focus();
+                    }
                 }, 300);
             });
         }
@@ -106,7 +135,17 @@ function addScrollToFunctionality() {
                 if (this.getAttribute('href') === '#') {
                     e.preventDefault();
                     if (this.textContent.includes('Calculator')) {
-                        scrollToSection('calculatorForm');
+                        // Scroll to income field specifically
+                        const incomeField = document.getElementById('income');
+                        if (incomeField) {
+                            incomeField.scrollIntoView({ 
+                                behavior: 'smooth', 
+                                block: 'center' 
+                            });
+                            incomeField.focus();
+                        } else {
+                            scrollToSection('calculatorForm');
+                        }
                     }
                 }
             });
