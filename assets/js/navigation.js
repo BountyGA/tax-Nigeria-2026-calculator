@@ -28,9 +28,9 @@ function showTaxLawPage() {
     if (!resultDiv || !monthlyDiv) return;
     
     resultDiv.innerHTML = `
-        <div class="result-card fade-in">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="text-primary mb-0">
+        <div class="result-card fade-in" style="max-width: 1200px; margin: 0 auto;">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4">
+                <h3 class="text-primary mb-3 mb-md-0">
                     <i class="bi bi-file-earmark-text me-2"></i>2026 Tax Reform Summary
                 </h3>
                 <button class="btn btn-outline-primary" onclick="showInfo('faq')">
@@ -38,45 +38,55 @@ function showTaxLawPage() {
                 </button>
             </div>
             
-            <div class="card border-0 shadow-sm mb-4">
+            <!-- Key Changes Card -->
+            <div class="card border-primary mb-4 shadow-sm">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Key Changes in 2026 Tax Reform</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="feature-card mb-3">
-                                <h6><i class="bi bi-plus-circle text-success me-2"></i>New Progressive Tax Brackets</h6>
-                                <p class="text-muted small">Higher earners pay higher rates with new brackets up to 25%.</p>
-                            </div>
-                            <div class="feature-card mb-3">
-                                <h6><i class="bi bi-house text-primary me-2"></i>Rent Relief (20% up to ₦500k)</h6>
-                                <p class="text-muted small">Deduction for rent payments to support urban workers.</p>
-                            </div>
-                            <div class="feature-card mb-3">
-                                <h6><i class="bi bi-shield text-info me-2"></i>Insurance Premium Relief</h6>
-                                <p class="text-muted small">Up to ₦100,000 deduction for health/life insurance.</p>
+                            <div class="p-3 border rounded h-100">
+                                <h6 class="text-success"><i class="bi bi-plus-circle me-2"></i>New Progressive Tax Brackets</h6>
+                                <p class="text-muted mb-0">Higher earners pay higher rates with new brackets up to 25%.</p>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="feature-card mb-3">
-                                <h6><i class="bi bi-currency-bitcoin text-warning me-2"></i>Crypto Tax (10%)</h6>
-                                <p class="text-muted small">Capital gains tax on cryptocurrency profits.</p>
+                            <div class="p-3 border rounded h-100">
+                                <h6 class="text-primary"><i class="bi bi-house me-2"></i>Rent Relief (20% up to ₦500k)</h6>
+                                <p class="text-muted mb-0">Deduction for rent payments to support urban workers.</p>
                             </div>
-                            <div class="feature-card mb-3">
-                                <h6><i class="bi bi-briefcase text-secondary me-2"></i>Business Expense Cap (30%)</h6>
-                                <p class="text-muted small">Maximum deductible business expenses at 30% of income.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded h-100">
+                                <h6 class="text-info"><i class="bi bi-shield me-2"></i>Insurance Premium Relief</h6>
+                                <p class="text-muted mb-0">Up to ₦100,000 deduction for health/life insurance.</p>
                             </div>
-                            <div class="feature-card mb-3">
-                                <h6><i class="bi bi-person-check text-success me-2"></i>Pension Relief (up to ₦200k)</h6>
-                                <p class="text-muted small">Encouraging retirement savings with tax incentives.</p>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded h-100">
+                                <h6 class="text-warning"><i class="bi bi-currency-bitcoin me-2"></i>Crypto Tax (10%)</h6>
+                                <p class="text-muted mb-0">Capital gains tax on cryptocurrency profits.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded h-100">
+                                <h6 class="text-secondary"><i class="bi bi-briefcase me-2"></i>Business Expense Cap (30%)</h6>
+                                <p class="text-muted mb-0">Maximum deductible business expenses at 30% of income.</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded h-100">
+                                <h6 class="text-success"><i class="bi bi-person-check me-2"></i>Pension Relief (up to ₦200k)</h6>
+                                <p class="text-muted mb-0">Encouraging retirement savings with tax incentives.</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div class="card border-0 shadow-sm">
+            <!-- Timeline Card -->
+            <div class="card border-secondary shadow-sm mb-4">
                 <div class="card-header bg-secondary text-white">
                     <h5 class="mb-0"><i class="bi bi-calendar me-2"></i>Implementation Timeline</h5>
                 </div>
@@ -86,39 +96,40 @@ function showTaxLawPage() {
                             <div class="timeline-date">Jan 2025</div>
                             <div class="timeline-content">
                                 <h6>Proposal Announcement</h6>
-                                <p>Tax reform proposal presented to National Assembly</p>
+                                <p class="mb-0">Tax reform proposal presented to National Assembly</p>
                             </div>
                         </div>
                         <div class="timeline-item">
                             <div class="timeline-date">Jun 2025</div>
                             <div class="timeline-content">
                                 <h6>Public Hearings</h6>
-                                <p>Stakeholder consultations and public feedback collection</p>
+                                <p class="mb-0">Stakeholder consultations and public feedback collection</p>
                             </div>
                         </div>
                         <div class="timeline-item">
                             <div class="timeline-date">Dec 2025</div>
                             <div class="timeline-content">
                                 <h6>Final Approval</h6>
-                                <p>Expected approval by both legislative houses</p>
+                                <p class="mb-0">Expected approval by both legislative houses</p>
                             </div>
                         </div>
                         <div class="timeline-item">
                             <div class="timeline-date">Jan 2026</div>
                             <div class="timeline-content">
                                 <h6>Implementation Begins</h6>
-                                <p>New tax rates and deductions take effect</p>
+                                <p class="mb-0">New tax rates and deductions take effect</p>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div class="text-center mt-4">
-                <button class="btn btn-primary me-2" onclick="scrollToSection('calculatorForm')">
+            <!-- Action Buttons -->
+            <div class="text-center mt-5">
+                <button class="btn btn-primary btn-lg me-2 mb-2 mb-md-0" onclick="scrollToSection('calculatorForm')">
                     <i class="bi bi-calculator me-2"></i>Try Calculator
                 </button>
-                <button class="btn btn-outline-secondary" onclick="downloadPDF()">
+                <button class="btn btn-outline-secondary btn-lg ms-2" onclick="downloadPDF()">
                     <i class="bi bi-download me-2"></i>Download Full Guide
                 </button>
             </div>
