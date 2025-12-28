@@ -283,7 +283,7 @@ function calculateExampleTax(income) {
     return tax;
 }
 
-// Main calculation function - UPDATED WITH SCROLLING
+// Main calculation function - UPDATED WITH SCROLLING TO DONATION
 function calculateTax() {
     console.log("Calculate button clicked");
     
@@ -349,8 +349,37 @@ function calculateTax() {
         window.loadAdsAfterCalculation();
     }
     
-    // FEATURE: Auto scroll to results section
-    scrollToSection('result');
+    // FEATURE: First show results, then auto scroll to donation section
+    setTimeout(() => {
+        // First ensure results are visible
+        const resultSection = document.getElementById('result');
+        if (resultSection && resultSection.innerHTML.trim()) {
+            resultSection.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start' 
+            });
+            
+            // Then after a short delay, scroll to donation section
+            setTimeout(() => {
+                const donationSection = document.querySelector('.container.mt-5 .card.border-success');
+                if (donationSection) {
+                    donationSection.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start' 
+                    });
+                    
+                    // Highlight the donation section
+                    donationSection.classList.add('highlight-pulse');
+                    setTimeout(() => {
+                        donationSection.classList.remove('highlight-pulse');
+                    }, 2000);
+                } else {
+                    // Fallback to just showing results if donation section not found
+                    console.log("Donation section not found");
+                }
+            }, 800); // 0.8 second delay between showing results and scrolling to donation
+        }
+    }, 100);
 }
 
 function calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses) {
