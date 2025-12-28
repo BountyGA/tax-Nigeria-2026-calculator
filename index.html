@@ -405,69 +405,50 @@
         .fade-in {
             animation: fadeIn 0.5s ease-out;
         }
-
+        
                 /* Timeline Styles */
-        .timeline {
-            position: relative;
-            padding-left: 30px;
-        }
-        
-        .timeline::before {
-            content: '';
-            position: absolute;
-            left: 15px;
-            top: 0;
-            bottom: 0;
-            width: 2px;
-            background: var(--primary-color);
-            opacity: 0.3;
-        }
-        
-        .timeline-item {
-            position: relative;
-            margin-bottom: 30px;
-        }
-        
-        .timeline-item:last-child {
-            margin-bottom: 0;
-        }
-        
-        .timeline-item::before {
-            content: '';
-            position: absolute;
-            left: -28px;
-            top: 5px;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            border: 3px solid white;
-            box-shadow: 0 0 0 3px rgba(42, 92, 154, 0.2);
-        }
-        
-        .timeline-date {
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 5px;
-        }
-        
-        .timeline-content {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 3px solid var(--primary-color);
-        }
-        
-        .timeline-content h6 {
-            color: var(--dark-bg);
-            margin-bottom: 5px;
-        }
-        
-        .timeline-content p {
-            margin-bottom: 0;
-            font-size: 0.9rem;
-            color: #666;
-        }
+        /* Simplified Clean Timeline */
+.timeline {
+    position: relative;
+    padding-left: 40px;
+    margin: 2rem 0;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 20px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--primary-color);
+    opacity: 0.2;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -30px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid var(--primary-color);
+}
+
+.timeline-content {
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid rgba(42, 92, 154, 0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
         
         /* FAQ Styles */
         .accordion-button:not(.collapsed) {
