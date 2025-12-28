@@ -970,13 +970,19 @@
     </div>
 
     <!-- Add these buttons after the Features section -->
-<div class="text-center mt-4 mb-4">
-    <button class="btn btn-outline-info me-2" data-scroll-to="brackets">
-        <i class="bi bi-info-circle me-2"></i>View Tax Brackets
-    </button>
-    <button class="btn btn-outline-primary me-2" data-scroll-to="form">
-        <i class="bi bi-calculator me-2"></i>Start Calculating
-    </button>
+<div class="text-center mt-lg-5 mt-4 mb-lg-5 mb-4">
+    <!-- Responsive button spacing -->
+    <div class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-3">
+        <button class="btn btn-outline-info px-4 py-2 px-md-4 py-md-3" 
+                data-scroll-to="brackets">
+            <i class="bi bi-info-circle me-2"></i>View Tax Brackets
+        </button>
+        <button class="btn btn-outline-primary px-4 py-2 px-md-4 py-md-3" 
+                data-scroll-to="form">
+            <i class="bi bi-calculator me-2"></i>Start Calculating
+        </button>
+    </div>
+</div>
    
 </div>
 
@@ -997,14 +1003,11 @@
                     
                     <!-- Quick Actions -->
                     <div class="d-flex flex-wrap gap-3 mb-4">
-                        <button class="btn btn-success" onclick="scrollToSection('calculatorForm')">
-                            <i class="bi bi-calculator me-2"></i>Calculate Now
+                        <button class="btn btn-outline-success" data-scroll-to="result" onclick="calculateTax()">
+                            <i class="bi bi-lightning-charge me-2"></i>view your free Tax report
                         </button>
                         <button class="btn btn-outline-success" onclick="downloadPDF()">
                             <i class="bi bi-file-earmark-pdf me-2"></i>Download Report
-                        </button>
-                        <button class="btn btn-outline-success" data-scroll-to="result" onclick="calculateTax()">
-                            <i class="bi bi-lightning-charge me-2"></i>view your free Tax report
                         </button>
                     </div>
                     
