@@ -61,23 +61,69 @@ window.onload = function() {
     // Load tax brackets ONLY ONCE
     setTimeout(() => {
         loadBrackets();
+        // After brackets load, scroll to form
+        setTimeout(() => {
+            scrollToFormAfterBrackets();
+        }, 300);
     }, 500);
     
     // Add scroll-to functionality to key buttons
     addScrollToFunctionality();
 
-     // AUTO-SCROLL TO INCOME INPUT FIELD
-    setTimeout(() => {
-        const incomeField = document.getElementById('income');
-        if (incomeField) {
-            incomeField.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'center' 
-            });
-            incomeField.focus(); // Also focus on the field
-        }
-    }, 800);
+    // Update the donation button to prevent scrolling back
+    updateDonationButton();
 };
+
+// NEW FUNCTION: Scroll to form after brackets load
+function scrollToFormAfterBrackets() {
+    // Wait a bit for brackets to render
+    setTimeout(() => {
+        // Find the form section (calculator card)
+        const calculatorForm = document.getElementById('calculatorForm');
+        if (calculatorForm) {
+            calculatorForm.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start'  // Changed from 'center' to 'start'
+            });
+            
+            // Focus on the income field
+            const incomeField = document.getElementById('income');
+            if (incomeField) {
+                incomeField.focus();
+            }
+        }
+    }, 500);
+}
+
+// NEW FUNCTION: Update donation button behavior
+function updateDonationButton() {
+    setTimeout(() => {
+        // Find all "View your free Tax report" buttons in donation section
+        const donationButtons = document.querySelectorAll('.btn[data-scroll-to="result"]');
+        donationButtons.forEach(button => {
+            // Remove any existing onclick handlers
+            button.removeAttribute('onclick');
+            
+            // Add new click handler that doesn't scroll to donation
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // First calculate tax if not already done
+                const resultDiv = document.getElementById('result');
+                if (!resultDiv || !resultDiv.innerHTML.trim()) {
+                    // We need to calculate tax first
+                    calculateTax();
+                } else {
+                    // Results already exist, just scroll to them
+                    resultDiv.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    }, 1000); // Wait a bit longer to ensure DOM is ready
+} 
 
 // Add scroll-to functionality to key buttons
 function addScrollToFunctionality() {
