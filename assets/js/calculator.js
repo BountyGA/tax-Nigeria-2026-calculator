@@ -1098,7 +1098,23 @@ function downloadPDF() {
         
         y = drawTable(monthlyData, 25, y, pageWidth - 40);
         
-      
+        // Highlight monthly take-home - FIXED alignment
+        const highlightY = y - 28;
+        doc.setFillColor(242, 252, 245);
+        doc.rect(25, highlightY, pageWidth - 50, 7, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 130, 76);
+        doc.setFontSize(10);
+        
+        const takeHomeLabel = 'MONTHLY TAKE HOME';
+        doc.text(takeHomeLabel, 30, highlightY + 5);
+        
+        const takeHomeAmount = formatCurrencyPDF(result.monthlyTakeHome);
+        // FIXED: Right align the take home amount
+        const takeHomeWidth = doc.getTextWidth(takeHomeAmount);
+        const takeHomeRightEdge = pageWidth - 30;
+        doc.text(takeHomeAmount, takeHomeRightEdge - takeHomeWidth, highlightY + 5);
+        
         y += 10;
         
         // Add footer to page 1
