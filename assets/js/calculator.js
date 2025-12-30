@@ -764,205 +764,176 @@ function updateCurrency() {
     }
 }
 
-    function downloadPDF() {
+function downloadPDF() {
     const resultDiv = document.getElementById('result');
     if (!resultDiv || !resultDiv.innerHTML.trim()) {
         showNotification("Please calculate your tax first before downloading the report.", "warning");
-        scrollToSection('calculatorForm');
+        document.getElementById('income').focus();
         return;
     }
 
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ format: 'a4', unit: 'mm' });
+    const doc = new jsPDF({ format: "a4", unit: "mm" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
+    const getVal = id => parseFloat(document.getElementById(id)?.value.replace(/,/g,'')) || 0;
+
     const result = calculateNewTax2026(
-        parseFloat(document.getElementById("income").value.replace(/,/g, '')),
-        parseFloat(document.getElementById("rent").value.replace(/,/g, '')),
-        parseFloat(document.getElementById("pension").value.replace(/,/g, '')),
-        parseFloat(document.getElementById("nhis").value.replace(/,/g, '')),
-        parseFloat(document.getElementById("nhf").value.replace(/,/g, '')),
-        parseFloat(document.getElementById("insurance").value.replace(/,/g, '')),
-        parseFloat(document.getElementById("crypto").value.replace(/,/g, '')),
-        parseFloat(document.getElementById("expenses").value.replace(/,/g, ''))
+        getVal("income"), getVal("rent"), getVal("pension"),
+        getVal("nhis"), getVal("nhf"), getVal("insurance"),
+        getVal("crypto"), getVal("expenses")
     );
 
-    const dateStr = new Date().toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
-    const refId = `NGTAX-${Math.floor(1000 + Math.random() * 9000)}`;
+    const dateStr = new Date().toISOString().split("T")[0];
+    const refNumeric = Math.floor(100000 + Math.random()*900000);
+    const refId = `NGTAX-${refNumeric}`; // Format NGTAX-xxxxxx
+    const fileName = `NGTAX_REPORT_${dateStr}_${refId}.pdf`;
 
     const drawHeader = () => {
         doc.setFillColor(0, 102, 51);
-        doc.rect(0, 0, pageWidth, 24, 'F');
-        doc.setFont("helvetica", "bold");
+        doc.rect(0, 0, pageWidth, 22, "F");
+        doc.setFont("helvetica","bold");
         doc.setFontSize(13);
         doc.setTextColor(255,255,255);
-        doc.text("NG TAX CALCULATOR 2026", 18, 14);
+        doc.text("NG TAX CALCULATOR 2026", 14, 13);
         doc.setFontSize(8);
-        doc.text("ngtaxcalculator.online", 18, 18);
+        doc.text("ngtaxcalculator.online", 14, 17);
         doc.setTextColor(0,0,0);
     };
 
     const drawFooter = (pageNumber) => {
         const qrSize = 14;
-        const qrX = (pageWidth - qrSize) / 2;
-        const qrY = pageHeight - 18;
+        const qrX = (pageWidth - qrSize)/2;
+        const qrY = pageHeight - 17;
 
         doc.setDrawColor(0, 102, 51);
         doc.setLineWidth(0.3);
-        doc.line(15, qrY - 3, pageWidth - 15, qrY - 3);
+        doc.line(14, qrY - 3, pageWidth - 14, qrY - 3);
 
         generateQR("ngtaxcalculator.online").then(qrImg => {
-            if (qrImg) {
-                doc.addImage(qrImg, 'PNG', qrX, qrY, qrSize, qrSize);
-            }
+            if (qrImg) doc.addImage(qrImg, "PNG", qrX, qrY, qrSize, qrSize);
         });
 
         doc.setFontSize(6.5);
-        doc.setTextColor(100,100,100);
-        doc.text(`Page ${pageNumber}`, pageWidth - 16, qrY + 10, { align: 'right' });
-        doc.text(`Ref: ${refId}`, 16, qrY + 10);
-        doc.text("Educational estimate only — Consult a tax professional.", pageWidth/2, qrY + 10, { align:'center' });
+        doc.setTextColor(120,120,120);
+        doc.text(`Page ${pageNumber}`, pageWidth - 15, qrY + 9, { align:"right" });
+        doc.text(`Ref: ${refId}`, 15, qrY + 9);
+        doc.text("Educational estimate only — Consult a tax professional.", pageWidth/2, qrY + 9, { align:"center" });
         doc.setTextColor(0,0,0);
     };
 
-    const drawSection = (title, yPos) => {
-        doc.setFont("helvetica","bold");
-        doc.setFontSize(10);
-        doc.setTextColor(0,102,51);
-        doc.text(title, 18, yPos);
-        doc.setTextColor(0,0,0);
-        doc.setFont("helvetica","normal");
-        return yPos + 6;
-    };
-
-    const drawCard = (label, value, yPos) => {
-        doc.setFillColor(240, 248, 255);
-        doc.setDrawColor(0, 102, 51);
-        doc.roundedRect(18, yPos, pageWidth - 36, 16, 2, 2, 'FD');
-        doc.setFontSize(8);
-        doc.text(label, 23, yPos + 5);
-        doc.setFont("helvetica","bold");
-        doc.setFontSize(10);
-        doc.text(value, pageWidth - 23, yPos + 11, { align:'right' });
-        doc.setFont("helvetica","normal");
-    };
-
-    let y = 34;
+    let y = 30;
     let pageNumber = 1;
     drawHeader();
 
-    y = drawSection("INCOME SUMMARY", y);
-    drawCard("Annual Income", `₦ ${result.income.toLocaleString("en-NG",{minimumFractionDigits:2})}`, y);
-    y += 20;
-    drawCard("Taxable Income", `₦ ${result.taxable.toLocaleString("en-NG",{minimumFractionDigits:2})}`, y);
-    y += 20;
-    drawCard("Total Reliefs", `₦ ${result.totalReliefs.toLocaleString("en-NG",{minimumFractionDigits:2})}`, y);
-    y += 26;
+    doc.setFontSize(10);
+    doc.setFont("helvetica","bold");
+    doc.text("INCOME SUMMARY", 14, y);
+    doc.setFont("helvetica","normal");
+    y += 6;
 
-    y = drawSection("TAX SUMMARY", y);
+    const addCard = (label, value) => {
+        doc.setFillColor(245, 255, 248);
+        doc.setDrawColor(0, 102, 51);
+        doc.roundedRect(14, y, pageWidth - 28, 15, 2, 2, "FD");
+        doc.setFontSize(8);
+        doc.text(label, 18, y + 5);
+        doc.setFont("helvetica","bold");
+        doc.setFontSize(10);
+        doc.text(formatCurrency(value), pageWidth - 18, y + 11, { align:"right" });
+        doc.setFont("helvetica","normal");
+        y += 20;
+    };
+
+    addCard("Annual Income", result.income);
+    addCard("Taxable Income", result.taxable);
+    addCard("Total Reliefs", result.totalReliefs);
+
+    if (y > pageHeight - 40) {
+        doc.addPage();
+        pageNumber++;
+        drawHeader();
+        y = 30;
+    }
+
+    doc.setFont("helvetica","bold");
+    doc.text("TAX BREAKDOWN", 14, y);
+    doc.setFont("helvetica","normal");
+    y += 6;
+
     doc.autoTable({
         startY: y,
-        margin: { left:18, right:18 },
+        margin: { left:14, right:14 },
         head: [["Description","Amount"]],
         body: [
-            ["Income Tax", `₦ ${result.tax.toLocaleString("en-NG",{minimumFractionDigits:2})}`],
-            ["Crypto Tax", `₦ ${result.cryptoTax.toLocaleString("en-NG",{minimumFractionDigits:2})}`],
-            ["Total Tax Due", `₦ ${result.totalTax.toLocaleString("en-NG",{minimumFractionDigits:2})}`]
+            ["Income Tax", formatCurrency(result.tax)],
+            ["Crypto Tax", formatCurrency(result.cryptoTax)],
+            ["Total Tax Due", formatCurrency(result.totalTax)]
         ],
-        styles: { fontSize:8, cellPadding:2.4 },
-        theme: 'plain',
-        didDrawPage: () => {
-            drawFooter(pageNumber);
-        }
+        styles: { fontSize:8, cellPadding:2.8 },
+        theme: "plain",
+        didDrawPage: () => drawFooter(pageNumber)
     });
 
-    y = doc.lastAutoTable.finalY + 14;
+    y = doc.lastAutoTable.finalY + 16;
+
+    if (y > pageHeight - 36) {
+        doc.addPage();
+        pageNumber++;
+        drawHeader();
+        y = 30;
+    }
+
+    doc.setFont("helvetica","bold");
+    doc.text("MONTHLY SUMMARY", 14, y);
+    doc.setFont("helvetica","normal");
+    y += 6;
+
+    doc.autoTable({
+        startY: y,
+        margin: { left:14, right:14 },
+        head: [["Description","Amount"]],
+        body: [
+            ["Gross Monthly", formatCurrency(result.income/12)],
+            ["Monthly Reliefs", formatCurrency(result.totalReliefs/12)],
+            ["Monthly Take Home", formatCurrency(result.monthlyTakeHome)]
+        ],
+        styles: { fontSize:8, cellPadding:2.8 },
+        theme: "plain",
+        didDrawPage: () => drawFooter(pageNumber)
+    });
+
+    y = doc.lastAutoTable.finalY + 16;
 
     if (y > pageHeight - 32) {
         doc.addPage();
         pageNumber++;
         drawHeader();
-        y = 34;
+        y = 30;
     }
 
-    y = drawSection("MONTHLY BREAKDOWN", y);
-    doc.autoTable({
-        startY: y,
-        margin: { left:18, right:18 },
-        head: [["Description","Amount"]],
-        body: [
-            ["Gross Monthly", `₦ ${(result.income/12).toLocaleString("en-NG",{minimumFractionDigits:2})}`],
-            ["Monthly Deductions", `₦ ${(result.totalReliefs/12).toLocaleString("en-NG",{minimumFractionDigits:2})}`],
-            ["Monthly Take Home", `₦ ${result.monthlyTakeHome.toLocaleString("en-NG",{minimumFractionDigits:2})}`]
-        ],
-        styles: { fontSize:8, cellPadding:2.4 },
-        theme: 'plain',
-        didDrawPage: () => {
-            drawFooter(pageNumber);
-        }
-    });
-
-    y = doc.lastAutoTable.finalY + 18;
-
-    if (y > pageHeight - 30) {
-        doc.addPage();
-        pageNumber++;
-        drawHeader();
-        y = 34;
-    }
-
-    y = drawSection("DOCUMENT INFO & SIGNATURE", y);
-    doc.setFontSize(8);
-    doc.setTextColor(90,90,90);
-    doc.text("Digitally signed by:", 18, y);
     doc.setFont("helvetica","bold");
+    doc.setFontSize(8);
+    doc.text("Digitally signed by:", 14, y);
+    y += 5;
     doc.setFontSize(11);
     doc.setTextColor(0,102,51);
-    doc.text("Bounty Adetula", 18, y + 6);
-    doc.setFont("helvetica","normal");
-    doc.setFontSize(8);
+    doc.text("Bounty Adetula", 14, y);
     doc.setTextColor(0,0,0);
-    doc.text("Mechatronics Engineer (in training)", 18, y + 12);
-    doc.text(`Generated: ${dateStr}`, 18, y + 18);
-    doc.text(`Document ID: ${refId}`, pageWidth - 18, y + 18, { align:'right' });
+    y += 6;
+    doc.setFontSize(8);
+    doc.setFont("helvetica","normal");
+    doc.text("Mechatronics Engineer (in training)", 14, y);
+    y += 6;
+    doc.text(`Generated on: ${new Date().toDateString()}`, 14, y);
+    doc.text(`Document ID: ${refId}`, pageWidth - 14, y, { align:"right" });
 
-    doc.save(`NGTAX_REPORT_${dateStr.replace(/ /g,"_")}.pdf`);
+    // Save file
+    doc.save(fileName);
     showNotification("Your professional tax report is ready!", "success");
 }
-
-function generateQR(text) {
-    const qrCanvas = document.createElement("canvas");
-    const qr = new QRCodeStyling({
-        width: 256,
-        height: 256,
-        data: text,
-        dotsOptions: { type: "rounded" }
-    });
-
-    return qr.getRawData("png").then(blob => {
-        return new Promise(resolve => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(blob);
-        });
-    }).catch(() => null);
-}
-
-function scrollToSection(id) {
-    const section = document.getElementById(id);
-    if (section) section.scrollIntoView({ behavior: "smooth" });
-}
-
-function showNotification(msg, type="info") {
-    if (window.showNotification) {
-        window.showNotification(msg, type);
-    } else {
-        alert(msg);
-    }
-}
-                
-
+ 
 
 // Missing functions that need to be added
 function shareWhatsApp() {
