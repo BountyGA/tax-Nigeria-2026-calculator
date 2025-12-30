@@ -765,175 +765,73 @@ function updateCurrency() {
 }
 
 function downloadPDF() {
-    const resultDiv = document.getElementById('result');
-    if (!resultDiv || !resultDiv.innerHTML.trim()) {
-        showNotification("Please calculate your tax first before downloading the report.", "warning");
-        document.getElementById('income').focus();
-        return;
+    const doc = new jsPDF();
+    const lineHeight = 10;
+    let y = 20;
+
+    // Helper to add section titles
+    function addSectionTitle(title) {
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(42, 92, 154); // Primary color
+        doc.text(title, 14, y);
+        y += lineHeight;
     }
 
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ format: "a4", unit: "mm" });
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-
-    const getVal = id => parseFloat(document.getElementById(id)?.value.replace(/,/g,'')) || 0;
-
-    const result = calculateNewTax2026(
-        getVal("income"), getVal("rent"), getVal("pension"),
-        getVal("nhis"), getVal("nhf"), getVal("insurance"),
-        getVal("crypto"), getVal("expenses")
-    );
-
-    const dateStr = new Date().toISOString().split("T")[0];
-    const refNumeric = Math.floor(100000 + Math.random()*900000);
-    const refId = `NGTAX-${refNumeric}`; // Format NGTAX-xxxxxx
-    const fileName = `NGTAX_REPORT_${dateStr}_${refId}.pdf`;
-
-    const drawHeader = () => {
-        doc.setFillColor(0, 102, 51);
-        doc.rect(0, 0, pageWidth, 22, "F");
-        doc.setFont("helvetica","bold");
-        doc.setFontSize(13);
-        doc.setTextColor(255,255,255);
-        doc.text("NG TAX CALCULATOR 2026", 14, 13);
-        doc.setFontSize(8);
-        doc.text("ngtaxcalculator.online", 14, 17);
-        doc.setTextColor(0,0,0);
-    };
-
-    const drawFooter = (pageNumber) => {
-        const qrSize = 14;
-        const qrX = (pageWidth - qrSize)/2;
-        const qrY = pageHeight - 17;
-
-        doc.setDrawColor(0, 102, 51);
-        doc.setLineWidth(0.3);
-        doc.line(14, qrY - 3, pageWidth - 14, qrY - 3);
-
-        generateQR("ngtaxcalculator.online").then(qrImg => {
-            if (qrImg) doc.addImage(qrImg, "PNG", qrX, qrY, qrSize, qrSize);
-        });
-
-        doc.setFontSize(6.5);
-        doc.setTextColor(120,120,120);
-        doc.text(`Page ${pageNumber}`, pageWidth - 15, qrY + 9, { align:"right" });
-        doc.text(`Ref: ${refId}`, 15, qrY + 9);
-        doc.text("Educational estimate only — Consult a tax professional.", pageWidth/2, qrY + 9, { align:"center" });
-        doc.setTextColor(0,0,0);
-    };
-
-    let y = 30;
-    let pageNumber = 1;
-    drawHeader();
-
-    doc.setFontSize(10);
-    doc.setFont("helvetica","bold");
-    doc.text("INCOME SUMMARY", 14, y);
-    doc.setFont("helvetica","normal");
-    y += 6;
-
-    const addCard = (label, value) => {
-        doc.setFillColor(245, 255, 248);
-        doc.setDrawColor(0, 102, 51);
-        doc.roundedRect(14, y, pageWidth - 28, 15, 2, 2, "FD");
-        doc.setFontSize(8);
-        doc.text(label, 18, y + 5);
-        doc.setFont("helvetica","bold");
-        doc.setFontSize(10);
-        doc.text(formatCurrency(value), pageWidth - 18, y + 11, { align:"right" });
-        doc.setFont("helvetica","normal");
-        y += 20;
-    };
-
-    addCard("Annual Income", result.income);
-    addCard("Taxable Income", result.taxable);
-    addCard("Total Reliefs", result.totalReliefs);
-
-    if (y > pageHeight - 40) {
-        doc.addPage();
-        pageNumber++;
-        drawHeader();
-        y = 30;
+    // Helper to add key-value pairs
+    function addItem(key, value) {
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${key}: ${value}`, 14, y);
+        y += lineHeight;
     }
 
-    doc.setFont("helvetica","bold");
-    doc.text("TAX BREAKDOWN", 14, y);
-    doc.setFont("helvetica","normal");
-    y += 6;
+    // Title
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(42, 92, 154);
+    doc.text("Nigeria Tax Calculator 2026 Report", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+    y += 15;
 
-    doc.autoTable({
-        startY: y,
-        margin: { left:14, right:14 },
-        head: [["Description","Amount"]],
-        body: [
-            ["Income Tax", formatCurrency(result.tax)],
-            ["Crypto Tax", formatCurrency(result.cryptoTax)],
-            ["Total Tax Due", formatCurrency(result.totalTax)]
-        ],
-        styles: { fontSize:8, cellPadding:2.8 },
-        theme: "plain",
-        didDrawPage: () => drawFooter(pageNumber)
-    });
+    const currency = document.getElementById("currency").value || "₦";
 
-    y = doc.lastAutoTable.finalY + 16;
-
-    if (y > pageHeight - 36) {
-        doc.addPage();
-        pageNumber++;
-        drawHeader();
-        y = 30;
-    }
-
-    doc.setFont("helvetica","bold");
-    doc.text("MONTHLY SUMMARY", 14, y);
-    doc.setFont("helvetica","normal");
-    y += 6;
-
-    doc.autoTable({
-        startY: y,
-        margin: { left:14, right:14 },
-        head: [["Description","Amount"]],
-        body: [
-            ["Gross Monthly", formatCurrency(result.income/12)],
-            ["Monthly Reliefs", formatCurrency(result.totalReliefs/12)],
-            ["Monthly Take Home", formatCurrency(result.monthlyTakeHome)]
-        ],
-        styles: { fontSize:8, cellPadding:2.8 },
-        theme: "plain",
-        didDrawPage: () => drawFooter(pageNumber)
-    });
-
-    y = doc.lastAutoTable.finalY + 16;
-
-    if (y > pageHeight - 32) {
-        doc.addPage();
-        pageNumber++;
-        drawHeader();
-        y = 30;
-    }
-
-    doc.setFont("helvetica","bold");
-    doc.setFontSize(8);
-    doc.text("Digitally signed by:", 14, y);
+    // User Details
+    addSectionTitle("User Details");
+    addItem("Annual Income", `${currency}${document.getElementById("income").value || 0}`);
     y += 5;
-    doc.setFontSize(11);
-    doc.setTextColor(0,102,51);
-    doc.text("Bounty Adetula", 14, y);
-    doc.setTextColor(0,0,0);
-    y += 6;
-    doc.setFontSize(8);
-    doc.setFont("helvetica","normal");
-    doc.text("Mechatronics Engineer (in training)", 14, y);
-    y += 6;
-    doc.text(`Generated on: ${new Date().toDateString()}`, 14, y);
-    doc.text(`Document ID: ${refId}`, pageWidth - 14, y, { align:"right" });
 
-    // Save file
-    doc.save(fileName);
-    showNotification("Your professional tax report is ready!", "success");
+    // Deductions & Allowances
+    addSectionTitle("Deductions & Allowances");
+    addItem("Rent Paid", `${currency}${document.getElementById("rent").value || 0}`);
+    addItem("Pension Contribution", `${currency}${document.getElementById("pension").value || 0}`);
+    addItem("NHIS Contribution", `${currency}${document.getElementById("nhis").value || 0}`);
+    addItem("NHF Contribution", `${currency}${document.getElementById("nhf").value || 0}`);
+    addItem("Insurance Premium", `${currency}${document.getElementById("insurance").value || 0}`);
+    addItem("Crypto Gains", `${currency}${document.getElementById("crypto").value || 0}`);
+    addItem("Business Expenses", `${currency}${document.getElementById("expenses").value || 0}`);
+    y += 5;
+
+    // Optionally, you can calculate totals here if you already have a calculateTax() function
+    // For example:
+    // let totalDeductions = rent + pension + nhis + nhf + insurance + crypto + expenses;
+    // let taxableIncome = income - totalDeductions;
+    // addSectionTitle("Summary");
+    // addItem("Total Deductions", `${currency}${totalDeductions}`);
+    // addItem("Taxable Income", `${currency}${taxableIncome}`);
+    // addItem("Estimated Tax", `${currency}${calculatedTax}`);
+
+    // Footer
+    y += 10;
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    const today = new Date();
+    doc.text(`Generated by NGTaxCalculator.online on ${today.toDateString()}`, 14, y);
+
+    // Save PDF
+    doc.save("Nigeria_Tax_Report_2026.pdf");
 }
- 
+
 
 // Missing functions that need to be added
 function shareWhatsApp() {
