@@ -1084,7 +1084,7 @@ function downloadPDF() {
         
         y += 15;
         
-      // ==================== MONTHLY BREAKDOWN ====================
+        // ==================== MONTHLY BREAKDOWN ====================
         y = checkNewPage(y, 40);
         drawSectionHeader('3. MONTHLY BREAKDOWN', 20, y);
         y += 10;
@@ -1093,28 +1093,13 @@ function downloadPDF() {
             ['Gross Monthly Income', formatCurrencyPDF(result.income / 12)],
             ['Monthly Taxable Income', formatCurrencyPDF(result.monthlyTaxable)],
             ['Monthly Tax Payment', formatCurrencyPDF(result.monthlyTax)],
-            ['', ''] // Empty row for spacing
+            ['Monthly Take Home Pay', formatCurrencyPDF(result.monthlyTakeHome)]
         ];
         
-        // Draw first 3 rows
         y = drawTable(monthlyData, 25, y, pageWidth - 40);
         
-        // Now draw the highlighted "Monthly Take Home" as a special row
-        const takeHomeY = y - 7; // Position for the last row
-        doc.setFillColor(242, 252, 245);
-        doc.rect(25, takeHomeY, pageWidth - 50, 7, 'F');
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 130, 76);
-        doc.setFontSize(9);
-        
-        doc.text('Monthly Take Home Pay', 30, takeHomeY + 5);
-        
-        const takeHomeAmount = formatCurrencyPDF(result.monthlyTakeHome);
-        const takeHomeWidth = doc.getTextWidth(takeHomeAmount);
-        const takeHomeRightEdge = pageWidth - 30;
-        doc.text(takeHomeAmount, takeHomeRightEdge - takeHomeWidth, takeHomeY + 5);
-        
-        y += 15; // Extra space after
+      
+        y += 10;
         
         // Add footer to page 1
         addFooter(1);
