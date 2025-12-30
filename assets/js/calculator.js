@@ -1258,7 +1258,6 @@ function downloadPDF() {
     }
 }
 
-
 // Missing functions that need to be added
 function shareWhatsApp() {
     const resultDiv = document.getElementById('result');
