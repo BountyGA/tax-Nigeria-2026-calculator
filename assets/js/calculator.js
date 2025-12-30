@@ -764,80 +764,6 @@ function updateCurrency() {
     }
 }
 
-// ============================================
-// HELPER FUNCTIONS FOR PDF (ADD THESE FIRST!)
-// ============================================
-
-// Helper function to determine tax bracket
-function getTaxBracket(taxableIncome) {
-    // Ensure taxBrackets is accessible
-    if (!window.taxBrackets || !Array.isArray(window.taxBrackets)) {
-        return "Standard Bracket";
-    }
-    
-    const brackets = window.taxBrackets;
-    for (let i = brackets.length - 1; i >= 0; i--) {
-        if (taxableIncome > brackets[i].min) {
-            const rate = (brackets[i].rate * 100).toFixed(1);
-            return `${rate}% Bracket`;
-        }
-    }
-    return "0% Bracket";
-}
-
-// Helper function to calculate tax efficiency score
-function calculateTaxEfficiency(result) {
-    const maxPossibleRelief = 500000 + 200000 + 100000; // Rent + Pension + Insurance caps
-    const actualRelief = result.rentRelief + result.pensionRelief + result.insuranceRelief;
-    
-    // Avoid division by zero
-    if (maxPossibleRelief <= 0) return "0.0";
-    
-    let efficiency = (actualRelief / maxPossibleRelief) * 100;
-    efficiency = Math.min(efficiency, 100); // Cap at 100%
-    
-    return efficiency.toFixed(1);
-}
-
-// ============================================
-// HELPER FUNCTIONS (MUST BE DEFINED FIRST)
-// ============================================
-
-// Helper function to determine tax bracket
-function getTaxBracket(taxableIncome) {
-    // Ensure taxBrackets is accessible
-    if (!window.taxBrackets || !Array.isArray(window.taxBrackets)) {
-        return "Standard Bracket";
-    }
-    
-    const brackets = window.taxBrackets;
-    for (let i = brackets.length - 1; i >= 0; i--) {
-        if (taxableIncome > brackets[i].min) {
-            const rate = (brackets[i].rate * 100).toFixed(1);
-            return `${rate}% Bracket`;
-        }
-    }
-    return "0% Bracket";
-}
-
-// Helper function to calculate tax efficiency score
-function calculateTaxEfficiency(result) {
-    const maxPossibleRelief = 500000 + 200000 + 100000; // Rent + Pension + Insurance caps
-    const actualRelief = result.rentRelief + result.pensionRelief + result.insuranceRelief;
-    
-    // Avoid division by zero
-    if (maxPossibleRelief <= 0) return "0.0";
-    
-    let efficiency = (actualRelief / maxPossibleRelief) * 100;
-    efficiency = Math.min(efficiency, 100); // Cap at 100%
-    
-    return efficiency.toFixed(1);
-}
-
-// ============================================
-// MAIN PDF FUNCTION
-// ============================================
-
 function downloadPDF() {
     const resultDiv = document.getElementById('result');
     if (!resultDiv || !resultDiv.innerHTML.trim()) {
@@ -848,25 +774,18 @@ function downloadPDF() {
     
     try {
         const { jsPDF } = window.jspdf;
-        if (!jsPDF) {
-            throw new Error("jsPDF library not loaded");
-        }
-        
         const doc = new jsPDF('p', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-        
-        // Track pages
         let currentPage = 1;
-        const totalPages = 2;
+        let totalPages = 1; // Will be updated
         
         // Get calculation data
         const getNumberValue = (id) => {
             const element = document.getElementById(id);
             if (!element || !element.value) return 0;
             const value = element.value.replace(/,/g, '');
-            const num = parseFloat(value);
-            return isNaN(num) ? 0 : num;
+            return isNaN(parseFloat(value)) ? 0 : parseFloat(value);
         };
         
         const income = getNumberValue("income");
@@ -880,12 +799,6 @@ function downloadPDF() {
         
         // Recalculate for PDF
         const result = calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses);
-        if (!result) {
-            throw new Error("Could not calculate tax");
-        }
-        
-        // Calculate net income
-        const netIncome = result.income - result.totalTax;
         
         const today = new Date();
         const dateStr = today.toLocaleDateString('en-GB', {
@@ -898,29 +811,19 @@ function downloadPDF() {
             minute: '2-digit'
         });
         
-        // Use GLOBAL currencySymbol, not DOM element
-        const currentCurrency = window.currencySymbol || '₦';
-        
-        // PERFECT currency formatting
+        // Helper function to format currency - FIXED: Add useGrouping for commas
         const formatCurrencyPDF = (amount) => {
-            const symbol = currentCurrency;
-            
-            // Handle very large numbers properly
-            let number = Math.abs(amount);
-            if (number === 0) return `${symbol}0.00`;
-            
-            // Format with commas and 2 decimal places
+            const symbol = document.getElementById('currency')?.value || '₦';
             const formatter = new Intl.NumberFormat('en-NG', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
-                useGrouping: true
+                useGrouping: true // THIS ADDS COMMAS
             });
-            
-            const formatted = formatter.format(number);
+            const formatted = formatter.format(Math.abs(amount));
             return `${symbol}${formatted}`;
         };
         
-        // Helper to draw section headers
+        // Helper function to draw section headers
         const drawSectionHeader = (text, x, y) => {
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
@@ -929,63 +832,46 @@ function downloadPDF() {
             
             // Underline
             doc.setDrawColor(42, 92, 154);
-            doc.setLineWidth(0.3);
-            doc.line(x, y + 1, x + 45, y + 1);
+            doc.setLineWidth(0.5);
+            doc.line(x, y + 1, x + 50, y + 1);
         };
         
-        // PERFECT table drawing
-        const drawTable = (data, x, y, width, hasHeader = true) => {
+        // FIXED: Improved table drawing with proper right alignment
+        const drawTable = (data, x, y, width) => {
             const rowHeight = 7;
             let currentY = y;
             
-            if (hasHeader) {
-                // Table header
-                doc.setFillColor(42, 92, 154);
-                doc.rect(x, currentY, width, rowHeight, 'F');
-                
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(10);
-                doc.setTextColor(255, 255, 255);
-                
-                const col1Width = width * 0.65;
-                const col2Width = width * 0.35;
-                
-                doc.text('Description', x + 5, currentY + 5);
-                doc.text('Amount', x + col1Width - 5, currentY + 5, { align: 'right' });
-                
-                currentY += rowHeight;
-                doc.setTextColor(0, 0, 0);
-            }
+            // Table header
+            doc.setFillColor(240, 240, 240);
+            doc.rect(x, currentY, width, rowHeight, 'F');
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.text('Description', x + 5, currentY + 5);
+            // Right align the "Amount" header
+            doc.text('Amount', x + width - 5, currentY + 5, { align: 'right' });
+            
+            currentY += rowHeight;
             
             // Table rows
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             
-            const col1Width = width * 0.65;
-            
             data.forEach((row, index) => {
-                // Skip empty rows
-                if (!row[0] && !row[1]) {
-                    currentY += 3; // Smaller space for empty rows
-                    return;
-                }
-                
-                // Alternate row colors
                 if (index % 2 === 0) {
                     doc.setFillColor(250, 250, 250);
                     doc.rect(x, currentY, width, rowHeight, 'F');
                 }
                 
-                // Column 1 (Description)
-                if (row[0]) {
-                    doc.text(row[0], x + 5, currentY + 5);
-                }
+                doc.text(row[0], x + 5, currentY + 5);
                 
-                // Column 2 (Amount) - RIGHT ALIGNED
-                if (row[1]) {
-                    const textWidth = doc.getTextWidth(row[1]);
-                    const amountX = x + width - 5 - textWidth;
-                    doc.text(row[1], amountX, currentY + 5);
+                // FIX: RIGHT ALIGN with proper positioning
+                // Calculate text width and position it exactly at the right edge
+                const amountText = row[1];
+                if (amountText) {
+                    const textWidth = doc.getTextWidth(amountText);
+                    const rightEdge = x + width - 5;
+                    doc.text(amountText, rightEdge - textWidth, currentY + 5);
                 }
                 
                 currentY += rowHeight;
@@ -994,175 +880,214 @@ function downloadPDF() {
             return currentY;
         };
         
-        // PERFECT watermark
+        // Function to add watermark to every page
         const addWatermark = () => {
             doc.saveGraphicsState();
-            doc.setGState(new doc.GState({ opacity: 0.03 }));
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(36);
+            doc.setGState(new doc.GState({ opacity: 0.03 })); // Very subtle
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(40); // Smaller than before
             doc.setTextColor(180, 180, 180);
-            
-            const centerX = pageWidth / 2;
-            const centerY = pageHeight / 2;
-            
-            doc.text("ngtaxcalculator.online", centerX, centerY, {
+            doc.text("ngtaxcalculator.online", pageWidth/2, pageHeight/2, {
                 align: 'center',
-                angle: 45,
-                baseline: 'middle'
+                angle: 45
             });
             doc.restoreGraphicsState();
         };
         
-        // Header for each page
+        // Function to add header to every page
         const addHeader = (pageNum) => {
-            // Blue header bar
+            // Header background (thinner)
             doc.setFillColor(42, 92, 154);
             doc.rect(0, 0, pageWidth, 30, 'F');
             
-            // Logo/Title
+            // Logo text
             doc.setFontSize(16);
             doc.setFont("helvetica", "bold");
             doc.setTextColor(255, 255, 255);
             doc.text('NG TAX', 20, 18);
-            doc.setFontSize(7);
+            doc.setFontSize(8);
             doc.text('CALCULATOR 2026', 20, 24);
             
-            // Right side info
-            doc.setFontSize(8);
-            doc.setTextColor(255, 255, 255, 0.9);
-            doc.text(`Page ${pageNum}/${totalPages}`, pageWidth - 20, 12, { align: 'right' });
+            // Page info
+            doc.setFontSize(7);
+            doc.text(`Page ${pageNum}`, pageWidth - 20, 12, { align: 'right' });
             doc.text(dateStr, pageWidth - 20, 18, { align: 'right' });
-            doc.text(timeStr, pageWidth - 20, 24, { align: 'right' });
             
             doc.setTextColor(0, 0, 0);
         };
         
-        // Footer for each page
+        // Function to add footer to every page
         const addFooter = (pageNum) => {
             const footerY = pageHeight - 10;
             
-            // Footer line
             doc.setDrawColor(220, 220, 220);
-            doc.setLineWidth(0.2);
-            doc.line(20, footerY - 5, pageWidth - 20, footerY - 5);
+            doc.line(20, footerY - 8, pageWidth - 20, footerY - 8);
             
             doc.setFontSize(7);
             doc.setTextColor(100, 100, 100);
             
-            const reportId = `NTAX-${Date.now().toString().slice(-8)}`;
-            doc.text('www.ngtaxcalculator.online', 25, footerY);
-            doc.text(`Report ID: ${reportId}`, pageWidth/2, footerY, { align: 'center' });
-            doc.text(`Page ${pageNum}/${totalPages}`, pageWidth - 25, footerY, { align: 'right' });
+            if (pageNum === 1) {
+                doc.text('www.ngtaxcalculator.online', 25, footerY);
+                doc.text('Educational Estimate Only', pageWidth/2, footerY, { align: 'center' });
+            } else {
+                doc.text('Confidential - Client Copy', 25, footerY);
+                doc.text('Page ' + pageNum, pageWidth/2, footerY, { align: 'center' });
+            }
+            
+            doc.text(`Report ID: NTAX-${Date.now().toString().slice(-6)}`, pageWidth - 25, footerY, { align: 'right' });
         };
         
-        // Smart page break checking - IMPROVED
-        const checkPageBreak = (currentY, spaceNeeded = 15) => {
-            return (currentY + spaceNeeded > pageHeight - 20);
-        };
-        
-        // Function to handle page breaks properly
-        const handlePageBreak = (neededSpace) => {
-            if (checkPageBreak(y, neededSpace)) {
+        // Function to check if we need new page
+        const checkNewPage = (currentY, neededSpace = 20) => {
+            if (currentY + neededSpace > pageHeight - 20) {
+                // Add footer to current page
                 addFooter(currentPage);
-                doc.addPage();
+                
+                // Add new page
                 currentPage++;
+                totalPages = currentPage;
+                doc.addPage();
+                
+                // Setup new page
                 addWatermark();
                 addHeader(currentPage);
-                y = 45;
-                return true;
+                
+                return 40; // Reset Y position for new page (lower because smaller header)
             }
-            return false;
+            return currentY;
         };
         
-        // ============================================
-        // PAGE 1: FINANCIAL CALCULATIONS
-        // ============================================
+        // ==================== PAGE 1 ====================
         addWatermark();
         addHeader(1);
-        let y = 45;
+        let y = 45; // Start lower because smaller header
         
-        // 1. INCOME SUMMARY
+        // ==================== INCOME SUMMARY ====================
         drawSectionHeader('1. INCOME SUMMARY', 20, y);
-        y += 12;
+        y += 10;
         
         const incomeData = [
             ['Annual Gross Income', formatCurrencyPDF(result.income)],
-            ['Currency', currentCurrency === '₦' ? 'Naira (NGN)' : 
-                      currentCurrency === '$' ? 'USD' :
-                      currentCurrency === '€' ? 'EUR' : 'GBP'],
-            ['Calculation Mode', window.currentMode === 'simple' ? 'Simple' : 'Advanced'],
-            ['Report Date', `${dateStr} • ${timeStr}`]
+            ['Currency', currencySymbol === '₦' ? 'Naira (NGN)' : 
+                      currencySymbol === '$' ? 'USD' :
+                      currencySymbol === '€' ? 'EUR' : 'GBP'],
+            ['Calculation Mode', currentMode === 'simple' ? 'Simple' : 'Advanced'],
+            ['Date Generated', dateStr]
         ];
         
         y = drawTable(incomeData, 25, y, pageWidth - 40);
-        y += 15;
-        
-        // 2. TAX CALCULATION BREAKDOWN
-        drawSectionHeader('2. TAX CALCULATION', 20, y);
-        y += 12;
-        
-        // Handle page break before large table
-        handlePageBreak(120);
-        
-        // Tax calculation table
-        const taxTableData = [
-            ['Gross Annual Income', formatCurrencyPDF(result.income)],
-            ['Rent Relief (20% max ₦500k)', `-${formatCurrencyPDF(result.rentRelief)}`],
-            ['Pension Relief (max ₦200k)', `-${formatCurrencyPDF(result.pensionRelief)}`],
-            ['Insurance Relief (max ₦100k)', `-${formatCurrencyPDF(result.insuranceRelief)}`],
-            ['NHIS Contribution', `-${formatCurrencyPDF(result.nhis)}`],
-            ['NHF Contribution', `-${formatCurrencyPDF(result.nhf)}`],
-            ['Business Expenses (30% max)', `-${formatCurrencyPDF(result.expensesApplied)}`],
-            ['', ''], // Spacer row
-            ['TOTAL DEDUCTIONS', `-${formatCurrencyPDF(result.totalReliefs)}`],
-            ['TAXABLE INCOME', formatCurrencyPDF(result.taxable)],
-            ['', ''], // Spacer row
-            ['Income Tax (Progressive)', formatCurrencyPDF(result.tax)],
-            ['Crypto Tax @ 10%', formatCurrencyPDF(result.cryptoTax)],
-        ];
-        
-        y = drawTable(taxTableData, 25, y, pageWidth - 40);
         y += 10;
         
-        // TOTAL TAX BOX - Highlighted
+        // ==================== TAX BREAKDOWN ====================
+        drawSectionHeader('2. TAX CALCULATION', 20, y);
+        y += 10;
+        
+        // Check if we have space for tax breakdown
+        y = checkNewPage(y, 120);
+        
+        const taxData = [
+            { desc: 'Gross Income', amount: result.income, style: 'normal' },
+            { desc: 'Rent Relief (20% max ₦500k)', amount: -result.rentRelief, style: 'deduction' },
+            { desc: 'Pension Relief (max ₦200k)', amount: -result.pensionRelief, style: 'deduction' },
+            { desc: 'Insurance Relief (max ₦100k)', amount: -result.insuranceRelief, style: 'deduction' },
+            { desc: 'NHIS Contribution', amount: -result.nhis, style: 'deduction' },
+            { desc: 'NHF Contribution', amount: -result.nhf, style: 'deduction' },
+            { desc: 'Business Expenses (30% max)', amount: -result.expensesApplied, style: 'deduction' },
+            { desc: 'TOTAL DEDUCTIONS', amount: -result.totalReliefs, style: 'total' },
+            { desc: 'TAXABLE INCOME', amount: result.taxable, style: 'highlight' },
+            { desc: 'Income Tax (Progressive)', amount: result.tax, style: 'tax' },
+            { desc: 'Crypto Tax @ 10%', amount: result.cryptoTax, style: 'tax' },
+        ];
+        
+        taxData.forEach(item => {
+            // Check if we need new page for each row
+            y = checkNewPage(y, 8);
+            
+            doc.setFont("helvetica", 
+                item.style === 'total' || item.style === 'highlight' ? "bold" : "normal");
+            doc.setFontSize(10);
+            
+            // Apply styling based on item type
+            switch(item.style) {
+                case 'highlight':
+                    doc.setFillColor(240, 249, 255);
+                    doc.rect(25, y - 6, pageWidth - 50, 8, 'F');
+                    doc.setTextColor(42, 92, 154);
+                    break;
+                case 'total':
+                    doc.setFillColor(248, 249, 250);
+                    doc.rect(25, y - 6, pageWidth - 50, 8, 'F');
+                    break;
+                case 'deduction':
+                    doc.setTextColor(100, 100, 100);
+                    break;
+                case 'tax':
+                    doc.setTextColor(30, 130, 76);
+                    break;
+            }
+            
+            doc.text(item.desc, 30, y);
+            
+            if (item.amount !== undefined) {
+                const amountStr = item.amount < 0 ? 
+                    `-${formatCurrencyPDF(Math.abs(item.amount))}` : 
+                    formatCurrencyPDF(item.amount);
+                
+                // FIXED: Right align with exact positioning
+                const textWidth = doc.getTextWidth(amountStr);
+                const rightEdge = pageWidth - 30;
+                doc.text(amountStr, rightEdge - textWidth, y);
+            }
+            
+            y += 8;
+            doc.setTextColor(0, 0, 0);
+        });
+        
+        // Total Tax box
+        y = checkNewPage(y, 15);
+        y += 5;
+        
         doc.setFillColor(30, 130, 76);
-        doc.rect(25, y, pageWidth - 50, 12, 'F');
+        doc.rect(25, y, pageWidth - 50, 10, 'F');
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
+        doc.setFontSize(12);
         doc.setTextColor(255, 255, 255);
         
         const totalTaxText = 'TOTAL TAX DUE';
         const totalTaxAmount = formatCurrencyPDF(result.totalTax);
         
-        doc.text(totalTaxText, 35, y + 8);
+        doc.text(totalTaxText, 35, y + 7);
         
-        const amountWidth = doc.getTextWidth(totalTaxAmount);
-        doc.text(totalTaxAmount, pageWidth - 35 - amountWidth, y + 8);
+        // FIXED: Right align the total tax amount
+        const totalTaxWidth = doc.getTextWidth(totalTaxAmount);
+        const totalTaxRightEdge = pageWidth - 35;
+        doc.text(totalTaxAmount, totalTaxRightEdge - totalTaxWidth, y + 7);
         
-        y += 18;
+        y += 15;
         
-        // Effective Rate and Net Income
+        // Effective rate and net income
+        y = checkNewPage(y, 10);
         doc.setFillColor(248, 249, 250);
-        doc.rect(25, y, pageWidth - 50, 10, 'F');
+        doc.rect(25, y, pageWidth - 50, 8, 'F');
         doc.setFont("helvetica", "bold");
         doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
         
-        const effectiveRateText = `Effective Tax Rate: ${result.effectiveRate.toFixed(2)}%`;
-        const netIncomeText = `Net Annual Income: ${formatCurrencyPDF(netIncome)}`;
+        const effectiveRateText = `Effective Rate: ${result.effectiveRate.toFixed(2)}%`;
+        doc.text(effectiveRateText, 30, y + 6);
         
-        doc.text(effectiveRateText, 30, y + 7);
-        
+        const netIncomeText = `Net Income: ${formatCurrencyPDF(result.netIncome)}`;
+        // FIXED: Right align the net income
         const netIncomeWidth = doc.getTextWidth(netIncomeText);
-        doc.text(netIncomeText, pageWidth - 30 - netIncomeWidth, y + 7);
+        const netIncomeRightEdge = pageWidth - 30;
+        doc.text(netIncomeText, netIncomeRightEdge - netIncomeWidth, y + 6);
         
         y += 15;
         
-        // 3. MONTHLY BREAKDOWN
-        handlePageBreak(50);
-        
+        // ==================== MONTHLY BREAKDOWN ====================
+        y = checkNewPage(y, 40);
         drawSectionHeader('3. MONTHLY BREAKDOWN', 20, y);
-        y += 12;
+        y += 10;
         
         const monthlyData = [
             ['Gross Monthly Income', formatCurrencyPDF(result.income / 12)],
@@ -1171,227 +1096,168 @@ function downloadPDF() {
             ['Monthly Take Home Pay', formatCurrencyPDF(result.monthlyTakeHome)]
         ];
         
-        const tableEndY = drawTable(monthlyData, 25, y, pageWidth - 40);
+        y = drawTable(monthlyData, 25, y, pageWidth - 40);
         
-        // Highlight the monthly take-home - FIXED POSITION
-        const highlightY = tableEndY - 28; // Correct calculation
+        // Highlight monthly take-home - FIXED alignment
+        const highlightY = y - 28;
         doc.setFillColor(242, 252, 245);
-        doc.rect(25, highlightY, pageWidth - 50, 8, 'F');
+        doc.rect(25, highlightY, pageWidth - 50, 7, 'F');
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 130, 76);
         doc.setFontSize(10);
         
-        const takeHomeLabel = 'MONTHLY TAKE HOME PAY';
-        const takeHomeAmount = formatCurrencyPDF(result.monthlyTakeHome);
-        
+        const takeHomeLabel = 'MONTHLY TAKE HOME';
         doc.text(takeHomeLabel, 30, highlightY + 5);
         
-        const takeHomeAmountWidth = doc.getTextWidth(takeHomeAmount);
-        doc.text(takeHomeAmount, pageWidth - 30 - takeHomeAmountWidth, highlightY + 5);
+        const takeHomeAmount = formatCurrencyPDF(result.monthlyTakeHome);
+        // FIXED: Right align the take home amount
+        const takeHomeWidth = doc.getTextWidth(takeHomeAmount);
+        const takeHomeRightEdge = pageWidth - 30;
+        doc.text(takeHomeAmount, takeHomeRightEdge - takeHomeWidth, highlightY + 5);
         
-        y = tableEndY + 5;
-        
-        // Quick Financial Tip
-        if (!handlePageBreak(30)) {
-            doc.setFillColor(255, 253, 240);
-            doc.setDrawColor(255, 193, 7);
-            doc.setLineWidth(0.5);
-            doc.rect(20, y, pageWidth - 40, 25, 'FD');
-            
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
-            doc.setTextColor(133, 100, 4);
-            doc.text('FINANCIAL TIP 💡', 25, y + 8);
-            
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(8);
-            doc.setTextColor(0, 0, 0);
-            doc.text('Consider increasing pension contributions to maximize', 30, y + 16);
-            doc.text('tax relief and retirement savings simultaneously.', 30, y + 21);
-            
-            y += 30;
-        }
+        y += 10;
         
         // Add footer to page 1
         addFooter(1);
         
-        // ============================================
-        // PAGE 2: FINANCIAL INSIGHTS & RECOMMENDATIONS
-        // ============================================
+        // ==================== PAGE 2 (KEY TAKEAWAYS) ====================
+        // Always create page 2 for key takeaways
+        currentPage++;
+        totalPages = currentPage;
         doc.addPage();
-        currentPage = 2;
         addWatermark();
         addHeader(currentPage);
         y = 45;
         
-        drawSectionHeader('4. FINANCIAL INSIGHTS & STRATEGIES', 20, y);
+        drawSectionHeader('4. KEY TAKEAWAYS & RECOMMENDATIONS', 20, y);
         y += 15;
-        
-        // Section 1: Your Tax Profile
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(42, 92, 154);
-        doc.text('YOUR TAX PROFILE SUMMARY:', 25, y);
-        y += 8;
-        
-        // Get helper function results
-        const taxBracket = getTaxBracket(result.taxable);
-        const taxEfficiency = calculateTaxEfficiency(result);
-        
-        const profileItems = [
-            `• Effective Tax Rate: ${result.effectiveRate.toFixed(2)}%`,
-            `• Tax Bracket: ${taxBracket}`,
-            `• Monthly Cash Flow: ${formatCurrencyPDF(result.monthlyTakeHome)}`,
-            `• Annual Tax Savings: ${formatCurrencyPDF(result.totalReliefs)}`,
-            `• Tax Efficiency Score: ${taxEfficiency}%`
-        ];
         
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
-        doc.setTextColor(0, 0, 0);
         
-        profileItems.forEach(item => {
-            handlePageBreak(6);
-            doc.text(item, 30, y);
-            y += 6;
+        const sections = [
+            {
+                title: 'IMPORTANT NOTES:',
+                items: [
+                    '• This is an ESTIMATE based on proposed 2026 tax reforms',
+                    '• Keep digital/physical receipts for all deductions',
+                    '• File tax returns by March 31st each year',
+                    '• Consult a certified tax advisor for official planning'
+                ]
+            },
+            {
+                title: 'TAX PLANNING TIPS:',
+                items: [
+                    '✓ Consider tax-efficient investments',
+                    '✓ Maximize pension contributions',
+                    '✓ Track all business expenses',
+                    '✓ Plan major purchases before year-end',
+                    '✓ Stay informed about tax law changes'
+                ]
+            },
+            {
+                title: 'NEXT STEPS:',
+                items: [
+                    '1. Save this report for your records',
+                    '2. Schedule tax professional consultation',
+                    '3. Set aside funds for tax payment',
+                    '4. Organize financial documentation',
+                    '5. Mark tax deadlines on calendar'
+                ]
+            }
+        ];
+        
+        sections.forEach((section, sectionIndex) => {
+            // Check space for section
+            y = checkNewPage(y, 30);
+            if (sectionIndex > 0) y += 5;
+            
+            // Section title
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(42, 92, 154);
+            doc.text(section.title, 25, y);
+            y += 8;
+            
+            // Section items
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(9);
+            doc.setTextColor(0, 0, 0);
+            
+            section.items.forEach(item => {
+                y = checkNewPage(y, 6);
+                doc.text(item, 30, y);
+                y += 6;
+            });
         });
         
         y += 10;
         
-        // Section 2: Optimization Strategies
-        handlePageBreak(20);
+        // ==================== DISCLAIMER BOX ====================
+        y = checkNewPage(y, 40);
         
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(42, 92, 154);
-        doc.text('TAX OPTIMIZATION STRATEGIES:', 25, y);
-        y += 8;
-        
-        const strategies = [
-            '✓ Maximize ₦200,000 pension relief for retirement planning',
-            '✓ Utilize ₦500,000 rent relief if you pay annual rent',
-            '✓ Claim ₦100,000 insurance relief for life/health policies',
-            '✓ Document all business expenses (30% of income limit)',
-            '✓ Consider tax-efficient investment vehicles',
-            '✓ Plan major purchases/deductions before December',
-            '✓ Keep digital records of all deductible expenses',
-            '✓ Consult tax professional for complex situations'
-        ];
-        
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(0, 0, 0);
-        
-        strategies.forEach(strategy => {
-            handlePageBreak(6);
-            doc.text(strategy, 30, y);
-            y += 5.5;
-        });
-        
-        y += 10;
-        
-        // Section 3: Compliance Timeline
-        handlePageBreak(20);
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(11);
-        doc.setTextColor(42, 92, 154);
-        doc.text('COMPLIANCE TIMELINE:', 25, y);
-        y += 8;
-        
-        const timeline = [
-            'Jan 1: Start tracking expenses for new tax year',
-            'Quarterly: Pay estimated taxes (if self-employed)',
-            'Dec 31: Finalize all deductible expenses',
-            'Mar 31: File annual tax returns deadline',
-            'Apr 30: Pay any balance due on tax liability'
-        ];
-        
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        
-        timeline.forEach(item => {
-            handlePageBreak(6);
-            doc.text(`• ${item}`, 30, y);
-            y += 6;
-        });
-        
-        y += 15;
-        
-        // ==================== IMPORTANT DISCLAIMER ====================
-        handlePageBreak(45);
-        
-        doc.setFillColor(255, 245, 245);
-        doc.setDrawColor(220, 53, 69);
+        doc.setFillColor(255, 250, 240);
+        doc.setDrawColor(255, 193, 7);
         doc.setLineWidth(0.5);
-        doc.rect(20, y, pageWidth - 40, 35, 'FD');
+        doc.rect(20, y, pageWidth - 40, 35, 'FD'); // Filled with border
         
         doc.setFont("helvetica", "bold");
         doc.setFontSize(10);
-        doc.setTextColor(220, 53, 69);
-        doc.text('⚠ IMPORTANT DISCLAIMER', pageWidth/2, y + 8, { align: 'center' });
+        doc.setTextColor(133, 100, 4);
+        doc.text('DISCLAIMER', 25, y + 8);
         
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(7);
+        doc.setFontSize(8);
         doc.setTextColor(0, 0, 0);
         
-        const disclaimer = [
-            'This report is generated by NG Tax Calculator 2026 for educational and',
-            'estimation purposes only. It does not constitute professional tax,',
-            'legal, or financial advice. Tax laws are complex and subject to change.',
-            'Always consult with a qualified tax professional or certified public',
-            'accountant for personalized advice. Refer to official FIRS guidelines.',
+        const disclaimerLines = [
+            'This report is for educational purposes only and does not constitute',
+            'professional tax, legal, or financial advice. The calculations are',
+            'estimates based on publicly available information about proposed',
+            '2026 tax reforms. Always verify with official sources and consult',
+            'qualified professionals before making financial decisions.',
             '',
-            'Official Resources: FIRS (www.firs.gov.ng) | CITN (www.citn.org)'
+            'Official Resources: FIRS.gov.ng | CITN.org'
         ];
         
-        disclaimer.forEach((line, i) => {
-            const lineY = y + 16 + (i * 3.5);
-            doc.text(line, pageWidth/2, lineY, { align: 'center' });
+        disclaimerLines.forEach((line, i) => {
+            doc.text(line, 25, y + 16 + (i * 4));
         });
         
-        y += 40;
+        y += 45;
         
-        // ==================== REPORT FOOTER ====================
-        doc.setDrawColor(220, 220, 220);
-        doc.line(20, y, pageWidth - 20, y);
-        y += 5;
+        // ==================== CONTACT INFO ====================
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(42, 92, 154);
+        doc.text('Generated by:', 25, y);
+        doc.text('NG Tax Calculator 2026', 60, y);
+        doc.text('www.ngtaxcalculator.online', 60, y + 4);
+        doc.text('Report valid until:', pageWidth/2, y);
         
-        doc.setFontSize(7);
-        doc.setTextColor(100, 100, 100);
-        
-        // Left column
-        doc.text('Generated by NG Tax Calculator 2026', 25, y);
-        doc.text('www.ngtaxcalculator.online', 25, y + 3.5);
-        
-        // Center column
-        const reportId = `TAX-${Date.now().toString().slice(-8)}`;
-        doc.text(`Report ID: ${reportId}`, pageWidth/2, y, { align: 'center' });
-        doc.text(`Valid until: 31 Dec ${new Date().getFullYear() + 1}`, pageWidth/2, y + 3.5, { align: 'center' });
-        
-        // Right column
-        doc.text(`Total Pages: ${totalPages}`, pageWidth - 25, y, { align: 'right' });
-        doc.text(`Version: 2026.1`, pageWidth - 25, y + 3.5, { align: 'right' });
+        const validUntilText = `${new Date().getFullYear() + 1}`;
+        // FIXED: Right align the year
+        const yearWidth = doc.getTextWidth(validUntilText);
+        const yearRightEdge = pageWidth/2 + 30 + yearWidth;
+        doc.text(validUntilText, yearRightEdge - yearWidth, y);
         
         // Add final footer
-        addFooter(2);
+        addFooter(currentPage);
+        
+        // Update total pages in all headers (if needed, though jsPDF doesn't easily support this)
         
         // ==================== SAVE PDF ====================
-        const fileName = `NG_TAX_REPORT_${dateStr.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+        const fileName = `NGTAX_Report_${dateStr.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
         doc.save(fileName);
         
-        showNotification(`✅ Financial Tax Report (${totalPages} pages) downloaded successfully!`, 'success');
+        showNotification(`Professional ${currentPage}-page PDF report downloaded!`, 'success');
         
     } catch (error) {
         console.error('PDF generation error:', error);
-        showNotification('❌ Unable to generate PDF. Please try again.', 'warning');
+        showNotification('Unable to generate PDF. Please try again.', 'warning');
     }
 }
 
-// Make helper functions globally available
-window.getTaxBracket = getTaxBracket;
-window.calculateTaxEfficiency = calculateTaxEfficiency;
-window.downloadPDF = downloadPDF;
 
 // Missing functions that need to be added
 function shareWhatsApp() {
