@@ -894,34 +894,27 @@ function downloadPDF() {
             doc.restoreGraphicsState();
         };
         
-        // Function to add header to every page - UPDATED WITH WEBSITE
-const addHeader = (pageNum) => {
-    // Header background (thinner)
-    doc.setFillColor(42, 92, 154);
-    doc.rect(0, 0, pageWidth, 30, 'F');
-    
-    // Logo text
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(255, 255, 255);
-    doc.text('NG TAX', 20, 18);
-    doc.setFontSize(7);
-    doc.text('CALCULATOR 2026', 20, 24);
-    
-    // Website in center
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text('ngtaxcalculator.online', pageWidth/2, 20, { align: 'center' });
-    
-    // Page info right-aligned
-    doc.setFontSize(7);
-    doc.setTextColor(255, 255, 255, 0.9);
-    doc.text(`Page ${pageNum}`, pageWidth - 20, 12, { align: 'right' });
-    doc.text(dateStr, pageWidth - 20, 18, { align: 'right' });
-    doc.text(timeStr, pageWidth - 20, 24, { align: 'right' });
-    
-    doc.setTextColor(0, 0, 0);
-};
+        // Function to add header to every page
+        const addHeader = (pageNum) => {
+            // Header background (thinner)
+            doc.setFillColor(42, 92, 154);
+            doc.rect(0, 0, pageWidth, 30, 'F');
+            
+            // Logo text
+            doc.setFontSize(16);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(255, 255, 255);
+            doc.text('NG TAX', 20, 18);
+            doc.setFontSize(8);
+            doc.text('CALCULATOR 2026', 20, 24);
+            
+            // Page info
+            doc.setFontSize(7);
+            doc.text(`Page ${pageNum}`, pageWidth - 20, 12, { align: 'right' });
+            doc.text(dateStr, pageWidth - 20, 18, { align: 'right' });
+            
+            doc.setTextColor(0, 0, 0);
+        };
         
         // Function to add footer to every page
         const addFooter = (pageNum) => {
@@ -1105,26 +1098,24 @@ const addHeader = (pageNum) => {
         
         y = drawTable(monthlyData, 25, y, pageWidth - 40);
         
-       // Highlight monthly take-home - SIMPLER FIX
-// Just draw the highlight at a fixed position relative to the table bottom
-const highlightY = y - 7; // Position it at the last row
-
-doc.setFillColor(242, 252, 245);
-doc.rect(25, highlightY, pageWidth - 50, 7, 'F');
-doc.setFont("helvetica", "bold");
-doc.setTextColor(30, 130, 76);
-doc.setFontSize(10);
-
-const takeHomeLabel = 'MONTHLY TAKE HOME';
-doc.text(takeHomeLabel, 30, highlightY + 5);
-
-const takeHomeAmount = formatCurrencyPDF(result.monthlyTakeHome);
-// FIXED: Right align the take home amount
-const takeHomeWidth = doc.getTextWidth(takeHomeAmount);
-const takeHomeRightEdge = pageWidth - 30;
-doc.text(takeHomeAmount, takeHomeRightEdge - takeHomeWidth, highlightY + 5);
-
-y += 10; // Move down for next section
+        // Highlight monthly take-home - FIXED alignment
+        const highlightY = y - 28;
+        doc.setFillColor(242, 252, 245);
+        doc.rect(25, highlightY, pageWidth - 50, 7, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 130, 76);
+        doc.setFontSize(10);
+        
+        const takeHomeLabel = 'MONTHLY TAKE HOME';
+        doc.text(takeHomeLabel, 30, highlightY + 5);
+        
+        const takeHomeAmount = formatCurrencyPDF(result.monthlyTakeHome);
+        // FIXED: Right align the take home amount
+        const takeHomeWidth = doc.getTextWidth(takeHomeAmount);
+        const takeHomeRightEdge = pageWidth - 30;
+        doc.text(takeHomeAmount, takeHomeRightEdge - takeHomeWidth, highlightY + 5);
+        
+        y += 10;
         
         // Add footer to page 1
         addFooter(1);
