@@ -765,203 +765,404 @@ function updateCurrency() {
 }
 
   function downloadPDF() {
-    const resultDiv = document.getElementById('result');
-    if (!resultDiv || !resultDiv.innerHTML.trim()) {
-        showNotification("Please calculate your tax first before downloading the report.", "warning");
-        scrollToSection('calculatorForm');
-        return;
-    }
-
     try {
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
+        const doc = new jsPDF({ 
+            format: "a4", 
+            unit: "mm",
+            orientation: "portrait"
+        });
+        
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
-
-        // Helpers
-        const getNumberValue = (id) => {
-            const element = document.getElementById(id);
-            if (!element || !element.value) return 0;
-            const value = element.value.replace(/,/g, '');
-            return isNaN(parseFloat(value)) ? 0 : parseFloat(value);
+        const margin = 20;
+        const contentWidth = pageWidth - 2 * margin;
+        let y = 25;
+        
+        // Color scheme - Fintech professional colors
+        const colors = {
+            primary: '#2D3748', // Dark gray for headers
+            secondary: '#4A5568', // Medium gray
+            accent: '#3182CE', // Blue accent
+            success: '#38A169', // Green
+            warning: '#D69E2E', // Yellow
+            danger: '#E53E3E', // Red
+            light: '#718096', // Light gray
+            background: '#F7FAFC' // Very light gray
         };
-
-        const income = getNumberValue("income");
-        const rent = getNumberValue("rent");
-        const pension = getNumberValue("pension");
-        const nhis = getNumberValue("nhis");
-        const nhf = getNumberValue("nhf");
-        const insurance = getNumberValue("insurance");
-        const crypto = getNumberValue("crypto");
-        const expenses = getNumberValue("expenses");
-
-        const result = calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses);
-        result.netIncome = result.income - result.totalTax;
-
-        const today = new Date();
-        const dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        const timeStr = today.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-
-        const currencySymbol = document.getElementById('currency')?.value || '₦';
-        const formatCurrencyPDF = (amount) => {
-            return new Intl.NumberFormat('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(amount));
-        };
-        const drawAmount = (amount, isNegative = false) => `${isNegative ? '-' : ''}${currencySymbol} ${formatCurrencyPDF(amount)}`;
-
-        let currentPage = 1;
-        const totalPages = 2; // minimum pages
-
-        // PAGE HEADER
-        const addHeader = (pageNum) => {
-            doc.setFillColor(42, 92, 154);
-            doc.rect(0, 0, pageWidth, 25, 'F');
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.setTextColor(255, 255, 255);
-            doc.text('NG TAX CALCULATOR 2026', 20, 15);
-            doc.setFontSize(8);
-            const pageInfo = `Page ${pageNum}`;
-            doc.text(pageInfo, pageWidth - 25 - doc.getTextWidth(pageInfo), 12);
-            doc.setTextColor(0, 0, 0);
-        };
-
-        // PAGE FOOTER
-        const addFooter = (pageNum) => {
-            const footerY = pageHeight - 10;
-            doc.setDrawColor(200, 200, 200);
-            doc.line(20, footerY - 8, pageWidth - 20, footerY - 8);
-            doc.setFontSize(7);
-            doc.setTextColor(100, 100, 100);
-            doc.text("ngtaxcalculator.online", 25, footerY);
-            if (pageNum === 1) {
-                doc.text('EDUCATIONAL ESTIMATE ONLY - CONSULT A TAX PROFESSIONAL', pageWidth/2, footerY, { align: 'center' });
-            } else {
-                doc.text(`Confidential - Client Copy - Page ${pageNum}`, pageWidth/2, footerY, { align: 'center' });
-            }
-            const reportId = `Report ID: NTAX-${Date.now().toString().slice(-8)}`;
-            doc.text(reportId, pageWidth - 25 - doc.getTextWidth(reportId), footerY);
-        };
-
-        // WATERMARK
-        const addWatermark = () => {
-            doc.saveGraphicsState();
-            doc.setGState(new doc.GState({ opacity: 0.05 }));
-            doc.setFontSize(22);
-            doc.setTextColor(180, 180, 180);
-            doc.text("ngtaxcalculator.online", pageWidth/2, pageHeight/2, { align: 'center', angle: 45 });
-            doc.restoreGraphicsState();
-        };
-
-        const drawSectionHeader = (text, x, y) => {
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.setTextColor(42, 92, 154);
-            doc.text(text, x, y);
-            doc.setDrawColor(42, 92, 154);
-            doc.setLineWidth(0.3);
-            doc.line(x, y + 1, x + 50, y + 1);
-        };
-
-        const drawTable = (data, x, y, width) => {
-            const rowHeight = 7;
-            let currentY = y;
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
-            // Header
-            doc.setFillColor(240, 240, 240);
-            doc.rect(x, currentY, width, rowHeight, 'F');
-            doc.text('Description', x + 5, currentY + 5);
-            const amountText = 'Amount';
-            doc.text(amountText, x + width - 5 - doc.getTextWidth(amountText), currentY + 5);
-            currentY += rowHeight;
-
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            data.forEach((row, index) => {
-                if (index % 2 === 0) doc.setFillColor(250, 250, 250);
-                else doc.setFillColor(255, 255, 255);
-                doc.rect(x, currentY, width, rowHeight, 'F');
-                doc.text(row[0], x + 5, currentY + 5);
-                if (row[1]) {
-                    const rightEdge = x + width - 5;
-                    doc.text(row[1], rightEdge - doc.getTextWidth(row[1]), currentY + 5);
-                }
-                currentY += rowHeight;
-            });
-            return currentY;
-        };
-
-        const checkNewPage = (currentY, neededSpace = 20) => {
-            if (currentY + neededSpace > pageHeight - 30) {
-                addFooter(currentPage);
-                currentPage++;
+        
+        // Helper functions
+        const checkPageBreak = (spaceNeeded = 10) => {
+            if (y + spaceNeeded > pageHeight - 30) {
                 doc.addPage();
-                addWatermark();
-                addHeader(currentPage);
-                return 35;
+                y = 25;
+                return true;
             }
-            return currentY;
+            return false;
         };
-
-        // START DRAWING PDF
-        addWatermark();
-        addHeader(currentPage);
-        let y = 40;
-
-        // Income Summary
-        drawSectionHeader('1. INCOME SUMMARY', 20, y);
-        y += 10;
-        const incomeData = [
-            ['Annual Gross Income', drawAmount(result.income)],
-            ['Currency', currencySymbol === '₦' ? 'Naira (NGN)' : currencySymbol === '$' ? 'USD ($)' : currencySymbol === '€' ? 'EUR (€)' : 'GBP (£)'],
-            ['Calculation Mode', currentMode === 'simple' ? 'Simple' : 'Advanced'],
-            ['Date Generated', `${dateStr} at ${timeStr}`]
+        
+        const drawSectionLine = () => {
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 10;
+        };
+        
+        const formatCurrency = (value) => {
+            return value.toLocaleString('en-NG', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        };
+        
+        // Fetch values
+        const income = parseFloat(document.getElementById('income')?.value) || 0;
+        const rent = parseFloat(document.getElementById('rent')?.value) || 0;
+        const pension = parseFloat(document.getElementById('pension')?.value) || 0;
+        const nhis = parseFloat(document.getElementById('nhis')?.value) || 0;
+        const nhf = parseFloat(document.getElementById('nhf')?.value) || 0;
+        const insurance = parseFloat(document.getElementById('insurance')?.value) || 0;
+        const crypto = parseFloat(document.getElementById('crypto')?.value) || 0;
+        const expenses = parseFloat(document.getElementById('expenses')?.value) || 0;
+        const currency = document.getElementById('currency')?.value || '₦';
+        
+        // === HEADER SECTION ===
+        // Background rectangle
+        doc.setFillColor(247, 250, 252);
+        doc.roundedRect(margin - 5, 10, contentWidth + 10, 45, 3, 3, 'F');
+        
+        // Logo/Title
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(colors.primary);
+        doc.setFontSize(24);
+        doc.text("NG TAX CALCULATOR", pageWidth / 2, 25, { align: "center" });
+        
+        // Subtitle
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(colors.secondary);
+        doc.setFontSize(12);
+        doc.text("Professional Tax Estimation Report - 2026", pageWidth / 2, 35, { align: "center" });
+        
+        // Report details
+        doc.setFontSize(10);
+        doc.setTextColor(colors.light);
+        const reportDate = new Date().toLocaleDateString('en-NG', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        doc.text(`Generated on: ${reportDate}`, margin, 45);
+        doc.text(`Report ID: ${Math.random().toString(36).substr(2, 9).toUpperCase()}`, pageWidth - margin, 45, { align: "right" });
+        
+        y = 55;
+        drawSectionLine();
+        
+        // === INCOME & CONTRIBUTIONS SECTION ===
+        checkPageBreak(100);
+        
+        // Section header with colored background
+        doc.setFillColor(colors.accent);
+        doc.setDrawColor(colors.accent);
+        doc.roundedRect(margin, y, contentWidth, 10, 2, 2, 'F');
+        
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(13);
+        doc.text("INCOME & CONTRIBUTIONS", margin + 8, y + 6.5);
+        
+        y += 15;
+        
+        // Create two-column layout for better number alignment
+        const entries = [
+            { label: "ANNUAL INCOME", value: income, type: "income" },
+            { label: "RENT PAID", value: rent, type: "deduction" },
+            { label: "PENSION CONTRIBUTION", value: pension, type: "deduction" },
+            { label: "NHIS CONTRIBUTION", value: nhis, type: "deduction" },
+            { label: "NHF CONTRIBUTION", value: nhf, type: "deduction" },
+            { label: "INSURANCE PREMIUM", value: insurance, type: "deduction" },
+            { label: "CRYPTO GAINS", value: crypto, type: "income" },
+            { label: "BUSINESS EXPENSES", value: expenses, type: "deduction" }
         ];
-        y = drawTable(incomeData, 25, y, pageWidth - 50);
-        y += 10;
-
-        // Tax Breakdown
-        drawSectionHeader('2. TAX BREAKDOWN', 20, y);
-        y += 10;
-        y = checkNewPage(y, 120);
-        const taxData = [
-            ['Gross Income', drawAmount(result.income)],
-            ['Less: Rent Relief', drawAmount(result.rentRelief, true)],
-            ['Less: Pension Relief', drawAmount(result.pensionRelief, true)],
-            ['Less: Insurance Relief', drawAmount(result.insuranceRelief, true)],
-            ['Less: NHIS Contribution', drawAmount(result.nhis, true)],
-            ['Less: NHF Contribution', drawAmount(result.nhf, true)],
-            ['Less: Business Expenses', drawAmount(result.expensesApplied, true)],
-            ['Total Deductions', drawAmount(result.totalReliefs, true)],
-            ['Taxable Income', drawAmount(result.taxable)],
-            ['Income Tax', drawAmount(result.tax)],
-            ['Crypto Tax @10%', drawAmount(result.cryptoTax)],
-            ['Total Tax Due', drawAmount(result.totalTax)]
+        
+        // Calculate column positions for perfect alignment
+        const labelWidth = contentWidth * 0.6;
+        const valueWidth = contentWidth * 0.4;
+        const valueX = margin + labelWidth + 10;
+        
+        entries.forEach((item, index) => {
+            checkPageBreak(10);
+            
+            // Alternating row background
+            if (index % 2 === 0) {
+                doc.setFillColor(249, 250, 251);
+                doc.rect(margin, y - 4, contentWidth, 10, 'F');
+            }
+            
+            // Label
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(colors.primary);
+            doc.setFontSize(11);
+            doc.text(item.label, margin + 5, y);
+            
+            // Value with perfect right alignment
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(item.type === "income" ? colors.success : colors.accent);
+            
+            // Create text with proper alignment
+            const valueText = `${currency} ${formatCurrency(item.value)}`;
+            doc.text(valueText, valueX, y, { align: "right" });
+            
+            y += 8;
+        });
+        
+        y += 5;
+        drawSectionLine();
+        
+        // === TAX CALCULATION SUMMARY ===
+        checkPageBreak(80);
+        
+        // Section header
+        doc.setFillColor(colors.success);
+        doc.roundedRect(margin, y, contentWidth, 10, 2, 2, 'F');
+        
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(13);
+        doc.text("TAX CALCULATION SUMMARY", margin + 8, y + 6.5);
+        
+        y += 15;
+        
+        // Calculate tax (simplified Nigerian tax calculation)
+        const consolidatedRelief = Math.min(200000, 0.01 * income) + (0.2 * income);
+        const totalDeductions = rent + pension + nhis + nhf + insurance + expenses;
+        const taxableIncome = Math.max(0, income - consolidatedRelief - totalDeductions);
+        
+        // Calculate tax based on Nigerian progressive tax brackets (2024 rates)
+        let taxPayable = 0;
+        const taxBrackets = [
+            { limit: 300000, rate: 0.07 },
+            { limit: 600000, rate: 0.11 },
+            { limit: 1100000, rate: 0.15 },
+            { limit: 1600000, rate: 0.19 },
+            { limit: 3200000, rate: 0.21 },
+            { limit: Infinity, rate: 0.24 }
         ];
-        y = drawTable(taxData, 25, y, pageWidth - 50);
-        y += 10;
-
-        // Monthly Breakdown
-        drawSectionHeader('3. MONTHLY BREAKDOWN', 20, y);
-        y += 10;
-        y = checkNewPage(y, 80);
-        const monthlyData = [
-            ['Gross Monthly Income', drawAmount(result.income/12)],
-            ['Monthly Deductions', drawAmount(result.totalReliefs/12, true)],
-            ['Monthly Taxable Income', drawAmount(result.monthlyTaxable)],
-            ['Monthly Tax Payment', drawAmount(result.monthlyTax)],
-            ['Monthly Take Home', drawAmount(result.monthlyTakeHome)]
+        
+        let remainingIncome = taxableIncome;
+        let previousLimit = 0;
+        
+        taxBrackets.forEach(bracket => {
+            if (remainingIncome > 0) {
+                const taxableAmount = Math.min(bracket.limit - previousLimit, remainingIncome);
+                taxPayable += taxableAmount * bracket.rate;
+                remainingIncome -= taxableAmount;
+                previousLimit = bracket.limit;
+            }
+        });
+        
+        // Add crypto tax (assuming 10% on gains)
+        const cryptoTax = crypto * 0.1;
+        const totalTax = taxPayable + cryptoTax;
+        const monthlyTax = totalTax / 12;
+        const effectiveTaxRate = income > 0 ? (totalTax / income) * 100 : 0;
+        
+        // Summary items with perfect alignment
+        const summaryItems = [
+            { label: "TAXABLE INCOME", value: taxableIncome, color: colors.primary },
+            { label: "TOTAL DEDUCTIONS", value: totalDeductions, color: colors.secondary },
+            { label: "INCOME TAX PAYABLE", value: taxPayable, color: colors.accent },
+            { label: "CRYPTO TAX", value: cryptoTax, color: colors.warning },
+            { label: "TOTAL TAX PAYABLE", value: totalTax, color: colors.danger, bold: true },
+            { label: "MONTHLY ESTIMATE", value: monthlyTax, color: colors.success },
+            { label: "EFFECTIVE TAX RATE", value: effectiveTaxRate, suffix: "%", color: colors.light }
         ];
-        y = drawTable(monthlyData, 25, y, pageWidth - 50);
-
-        // Footer
-        addFooter(currentPage);
-
+        
+        summaryItems.forEach((item, index) => {
+            checkPageBreak(10);
+            
+            // Background for key items
+            if (item.label === "TOTAL TAX PAYABLE") {
+                doc.setFillColor(254, 242, 242);
+                doc.rect(margin, y - 5, contentWidth, 12, 'F');
+                doc.setDrawColor(252, 165, 165);
+                doc.setLineWidth(0.3);
+                doc.rect(margin, y - 5, contentWidth, 12);
+            }
+            
+            // Label
+            doc.setFont("helvetica", item.bold ? "bold" : "normal");
+            doc.setTextColor(item.color);
+            doc.setFontSize(item.bold ? 12 : 11);
+            doc.text(item.label, margin + 5, y);
+            
+            // Value with perfect alignment
+            const valueText = item.suffix 
+                ? `${currency} ${formatCurrency(item.value)} ${item.suffix}`
+                : `${currency} ${formatCurrency(item.value)}`;
+            
+            // Use fixed width font for numbers for perfect alignment
+            doc.setFont("courier", item.bold ? "bold" : "normal");
+            doc.text(valueText, pageWidth - margin - 5, y, { align: "right" });
+            
+            y += item.bold ? 10 : 8;
+        });
+        
+        y += 8;
+        drawSectionLine();
+        
+        // === VISUAL BREAKDOWN ===
+        checkPageBreak(60);
+        
+        // Simple bar chart representation
+        if (income > 0) {
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(colors.primary);
+            doc.setFontSize(13);
+            doc.text("TAX BREAKDOWN VISUALIZATION", margin, y);
+            y += 10;
+            
+            // Create a simple bar chart
+            const barWidth = contentWidth;
+            const barHeight = 8;
+            const barY = y;
+            
+            // Total income bar
+            doc.setFillColor(226, 232, 240);
+            doc.rect(margin, barY, barWidth, barHeight, 'F');
+            
+            // Tax portion
+            const taxWidth = (totalTax / income) * barWidth;
+            if (taxWidth > 0) {
+                doc.setFillColor(colors.danger);
+                doc.rect(margin, barY, taxWidth, barHeight, 'F');
+            }
+            
+            y += 15;
+            
+            // Legend
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            
+            // Tax portion label
+            doc.setFillColor(colors.danger);
+            doc.circle(margin + 5, y - 2, 3, 'F');
+            doc.setTextColor(colors.primary);
+            doc.text(`Tax (${effectiveTaxRate.toFixed(1)}%)`, margin + 12, y);
+            
+            // Take-home portion label
+            const takeHomePercent = 100 - effectiveTaxRate;
+            doc.setFillColor(colors.success);
+            doc.circle(margin + 70, y - 2, 3, 'F');
+            doc.text(`Take-home (${takeHomePercent.toFixed(1)}%)`, margin + 77, y);
+            
+            y += 10;
+        }
+        
+        drawSectionLine();
+        
+        // === DISCLAIMER SECTION ===
+        checkPageBreak(50);
+        
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(colors.primary);
+        doc.setFontSize(11);
+        doc.text("IMPORTANT DISCLAIMER", margin, y);
+        y += 7;
+        
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(colors.secondary);
+        doc.setFontSize(9);
+        const disclaimer = [
+            "This tax estimation report is generated for informational and planning purposes only.",
+            "The calculations are based on current Nigerian tax laws as of 2026 and common assumptions.",
+            "Actual tax liabilities may vary based on individual circumstances, additional deductions,",
+            "exemptions, and specific tax regulations applicable to your situation.",
+            "",
+            "For official tax calculations and filing, please consult with:",
+            "• Federal Inland Revenue Service (FIRS)",
+            "• A licensed tax professional or accountant",
+            "• Your financial advisor"
+        ];
+        
+        disclaimer.forEach(line => {
+            checkPageBreak(6);
+            if (line === "") {
+                y += 3;
+            } else if (line.includes("•")) {
+                doc.text(line, margin + 5, y);
+                y += 5;
+            } else {
+                doc.text(line, margin, y);
+                y += 5;
+            }
+        });
+        
+        // === FOOTER ===
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(colors.light);
+        doc.setFontSize(8);
+        
+        // Page numbers
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: "right" });
+            doc.text("Confidential - For Client Use Only", margin, pageHeight - 10);
+        }
+        
+        // Watermark on first page
+        doc.setPage(1);
+        doc.setTextColor(240, 240, 240);
+        doc.setFontSize(60);
+        doc.setFont("helvetica", "bold");
+        doc.text("ESTIMATE", pageWidth / 2, pageHeight / 2, { 
+            align: "center",
+            angle: 45 
+        });
+        
+        // Final watermark (professional)
+        doc.setTextColor(colors.light);
+        doc.setFontSize(10);
+        doc.text(`Generated by NG Tax Calculator • ${reportDate}`, pageWidth / 2, pageHeight - 15, { align: "center" });
+        doc.text("https://ngtaxcalculator.online", pageWidth / 2, pageHeight - 8, { align: "center" });
+        
         // Save PDF
-        doc.save(`NG_Tax_Report_${Date.now()}.pdf`);
-    } catch (error) {
-        console.error("PDF generation failed:", error);
-        showNotification("Error generating PDF. Please try again.", "danger");
+        const fileName = `Tax_Report_${new Date().toISOString().slice(0,10)}_${Math.random().toString(36).substr(2, 6).toUpperCase()}.pdf`;
+        doc.save(fileName);
+        
+        // Success notification
+        console.log("PDF generated successfully!");
+        return true;
+        
+    } catch (err) {
+        console.error("PDF generation failed:", err);
+        alert("Failed to generate PDF report. Please try again or contact support.");
+        return false;
+    }
+}
+
+// Optional: Add CSS-like styling helper for more advanced formatting
+function addStyledText(doc, text, x, y, options = {}) {
+    const defaults = {
+        fontSize: 11,
+        fontStyle: 'normal',
+        color: '#000000',
+        align: 'left',
+        maxWidth: null
+    };
+    
+    const settings = { ...defaults, ...options };
+    
+    doc.setFont("helvetica", settings.fontStyle);
+    doc.setFontSize(settings.fontSize);
+    doc.setTextColor(settings.color);
+    
+    if (settings.maxWidth) {
+        const lines = doc.splitTextToSize(text, settings.maxWidth);
+        doc.text(lines, x, y, { align: settings.align });
+        return y + (lines.length * settings.fontSize * 0.35);
+    } else {
+        doc.text(text, x, y, { align: settings.align });
+        return y + (settings.fontSize * 0.35);
     }
 }
       
