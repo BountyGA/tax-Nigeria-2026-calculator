@@ -764,7 +764,7 @@ function updateCurrency() {
     }
 }
 
-  function downloadPDF() {
+ function downloadPDF() {
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ 
@@ -791,6 +791,29 @@ function updateCurrency() {
             background: '#F7FAFC' // Very light gray
         };
         
+        // NEW: Tabular number formatting function
+        // This ensures digits are monospaced while keeping commas/decimal proportional
+        const formatCurrencyTabular = (value) => {
+            // Format with proper thousands separators and 2 decimal places
+            const parts = value.toFixed(2).split('.');
+            let integerPart = parts[0];
+            const decimalPart = parts[1];
+            
+            // Add thousands separators
+            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            
+            // Return formatted with currency symbol
+            return `${currency} ${integerPart}.${decimalPart}`;
+        };
+        
+        // NEW: Calculate exact text width for perfect alignment
+        const getTextWidth = (text, fontSize = 11) => {
+            // Get string width in points, then convert to mm
+            const fontSizePt = fontSize * 0.3527778; // Convert mm to points
+            const width = doc.getStringUnitWidth(text) * fontSizePt;
+            return width;
+        };
+        
         // Helper functions
         const checkPageBreak = (spaceNeeded = 10) => {
             if (y + spaceNeeded > pageHeight - 30) {
@@ -806,53 +829,6 @@ function updateCurrency() {
             doc.setLineWidth(0.5);
             doc.line(margin, y, pageWidth - margin, y);
             y += 10;
-        };
-        
-        const formatCurrency = (value) => {
-            return value.toLocaleString('en-NG', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-        };
-        
-        // NEW: Helper to add perfectly aligned label-value pairs
-        const addAlignedRow = (label, value, options = {}) => {
-            checkPageBreak(10);
-            
-            const {
-                labelColor = colors.primary,
-                valueColor = colors.primary,
-                labelFontSize = 11,
-                valueFontSize = 11,
-                isBold = false,
-                hasBackground = false,
-                backgroundIndex = 0
-            } = options;
-            
-            // Alternating row background
-            if (hasBackground && backgroundIndex % 2 === 0) {
-                doc.setFillColor(249, 250, 251);
-                doc.rect(margin, y - 4, contentWidth, 10, 'F');
-            }
-            
-            // Label (left-aligned)
-            doc.setFont("helvetica", isBold ? "bold" : "normal");
-            doc.setTextColor(labelColor);
-            doc.setFontSize(labelFontSize);
-            doc.text(label, margin + 5, y);
-            
-            // Value (right-aligned with consistent spacing)
-            const formattedValue = `${currency} ${formatCurrency(value)}`;
-            doc.setFont("helvetica", isBold ? "bold" : "normal");
-            doc.setTextColor(valueColor);
-            doc.setFontSize(valueFontSize);
-            
-            // Calculate perfect position - 5mm from right margin
-            const valueX = pageWidth - margin - 5;
-            doc.text(formattedValue, valueX, y, { align: "right" });
-            
-            y += isBold ? 9 : 8;
-            return y;
         };
         
         // Fetch values
@@ -912,7 +888,7 @@ function updateCurrency() {
         
         y += 15;
         
-        // Create entries with perfect alignment
+        // Create entries
         const entries = [
             { label: "ANNUAL INCOME", value: income, type: "income" },
             { label: "RENT PAID", value: rent, type: "deduction" },
@@ -924,22 +900,44 @@ function updateCurrency() {
             { label: "BUSINESS EXPENSES", value: expenses, type: "deduction" }
         ];
         
-        // Add all entries with perfect alignment
+        // Find the longest value to ensure consistent alignment
+        const maxValueLength = Math.max(...entries.map(e => 
+            formatCurrencyTabular(e.value).length
+        ));
+        
+        // Fixed right edge position (5mm from right margin)
+        const rightEdgeX = pageWidth - margin - 5;
+        
+        // Add all entries with PERFECT right alignment
         entries.forEach((item, index) => {
-            addAlignedRow(
-                item.label,
-                item.value,
-                {
-                    labelColor: colors.primary,
-                    valueColor: item.type === "income" ? colors.success : colors.accent,
-                    isBold: false,
-                    hasBackground: true,
-                    backgroundIndex: index
-                }
-            );
+            checkPageBreak(10);
+            
+            // Alternating row background
+            if (index % 2 === 0) {
+                doc.setFillColor(249, 250, 251);
+                doc.rect(margin, y - 4, contentWidth, 10, 'F');
+            }
+            
+            // Label (left-aligned)
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(colors.primary);
+            doc.setFontSize(11);
+            doc.text(item.label, margin + 5, y);
+            
+            // Value with PERFECT right alignment to the edge
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(item.type === "income" ? colors.success : colors.accent);
+            
+            // Format the value
+            const valueText = formatCurrencyTabular(item.value);
+            
+            // Draw at fixed right edge position
+            doc.text(valueText, rightEdgeX, y, { align: "right" });
+            
+            y += 8;
         });
         
-        y += 3;
+        y += 5;
         drawSectionLine();
         
         // === TAX CALCULATION SUMMARY ===
@@ -991,7 +989,7 @@ function updateCurrency() {
         const monthlyTax = totalTax / 12;
         const effectiveTaxRate = income > 0 ? (totalTax / income) * 100 : 0;
         
-        // Summary items with perfect alignment
+        // Summary items - ALL RIGHT-ALIGNED TO THE SAME EDGE
         const summaryItems = [
             { 
                 label: "TAXABLE INCOME", 
@@ -1019,21 +1017,22 @@ function updateCurrency() {
             }
         ];
         
-        // Add summary items
+        // Add summary items with consistent right alignment
         summaryItems.forEach((item, index) => {
             checkPageBreak(10);
-            addAlignedRow(
-                item.label,
-                item.value,
-                {
-                    labelColor: item.color,
-                    valueColor: item.color,
-                    isBold: item.isBold,
-                    hasBackground: false,
-                    labelFontSize: item.isBold ? 12 : 11,
-                    valueFontSize: item.isBold ? 12 : 11
-                }
-            );
+            
+            // Label
+            doc.setFont("helvetica", item.isBold ? "bold" : "normal");
+            doc.setTextColor(item.color);
+            doc.setFontSize(item.isBold ? 12 : 11);
+            doc.text(item.label, margin + 5, y);
+            
+            // Value - ALIGNED TO EXACT RIGHT EDGE
+            const valueText = formatCurrencyTabular(item.value);
+            doc.setFont("helvetica", item.isBold ? "bold" : "normal");
+            doc.text(valueText, rightEdgeX, y, { align: "right" });
+            
+            y += item.isBold ? 9 : 8;
         });
         
         // Add TOTAL TAX PAYABLE with special styling
@@ -1046,45 +1045,30 @@ function updateCurrency() {
         doc.setLineWidth(0.3);
         doc.rect(margin, y - 6, contentWidth, 13);
         
-        // Total tax row
-        addAlignedRow(
-            "TOTAL TAX PAYABLE",
-            totalTax,
-            {
-                labelColor: colors.danger,
-                valueColor: colors.danger,
-                isBold: true,
-                hasBackground: false,
-                labelFontSize: 13,
-                valueFontSize: 13
-            }
-        );
+        // Total tax label
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(colors.danger);
+        doc.setFontSize(13);
+        doc.text("TOTAL TAX PAYABLE", margin + 5, y);
         
-        y += 2; // Extra spacing after total tax
+        // Total tax value - ALIGNED TO EXACT RIGHT EDGE
+        const totalTaxText = formatCurrencyTabular(totalTax);
+        doc.text(totalTaxText, rightEdgeX, y, { align: "right" });
         
-        // Add remaining items
-        const remainingItems = [
-            { 
-                label: "MONTHLY ESTIMATE", 
-                value: monthlyTax, 
-                color: colors.success,
-                isBold: false 
-            }
-        ];
+        y += 10;
         
-        remainingItems.forEach((item) => {
-            checkPageBreak(10);
-            addAlignedRow(
-                item.label,
-                item.value,
-                {
-                    labelColor: item.color,
-                    valueColor: item.color,
-                    isBold: item.isBold,
-                    hasBackground: false
-                }
-            );
-        });
+        // Add monthly estimate
+        checkPageBreak(10);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(colors.success);
+        doc.setFontSize(11);
+        doc.text("MONTHLY ESTIMATE", margin + 5, y);
+        
+        const monthlyTaxText = formatCurrencyTabular(monthlyTax);
+        doc.setFont("helvetica", "bold");
+        doc.text(monthlyTaxText, rightEdgeX, y, { align: "right" });
+        
+        y += 8;
         
         // Add effective tax rate as percentage
         checkPageBreak(10);
@@ -1094,9 +1078,9 @@ function updateCurrency() {
         doc.text("EFFECTIVE TAX RATE", margin + 5, y);
         
         doc.setFont("helvetica", "bold");
-        doc.setTextColor(colors.light);
         const rateText = `${effectiveTaxRate.toFixed(2)}%`;
-        doc.text(rateText, pageWidth - margin - 5, y, { align: "right" });
+        // For percentage, also align to the same right edge
+        doc.text(rateText, rightEdgeX, y, { align: "right" });
         y += 8;
         
         y += 5;
