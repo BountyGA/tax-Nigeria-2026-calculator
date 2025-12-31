@@ -791,100 +791,8 @@ function downloadPDF() {
             background: '#F7FAFC'
         };
         
-        // ========== NEW SOLUTION: Manual Text Width Calculation ==========
-        
-        // Helper to get exact text width in mm
-        const getTextWidth = (text, fontSize = 11, fontStyle = 'normal') => {
-            const currentFont = doc.internal.getFont();
-            const fontName = currentFont.fontName;
-            const fontWeight = fontStyle === 'bold' ? 'bold' : 'normal';
-            
-            // Approximate widths for helvetica (these are in PDF units, not mm)
-            const charWidths = {
-                'normal': {
-                    '0': 0.5, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5,
-                    '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5, '9': 0.5,
-                    '.': 0.25, ',': 0.25,
-                    '₦': 0.6, '$': 0.5, '€': 0.6, '£': 0.6,
-                    ' ': 0.25, '%': 0.8
-                },
-                'bold': {
-                    '0': 0.55, '1': 0.55, '2': 0.55, '3': 0.55, '4': 0.55,
-                    '5': 0.55, '6': 0.55, '7': 0.55, '8': 0.55, '9': 0.55,
-                    '.': 0.3, ',': 0.3,
-                    '₦': 0.65, '$': 0.55, '€': 0.65, '£': 0.65,
-                    ' ': 0.3, '%': 0.85
-                }
-            };
-            
-            // Calculate total width
-            let totalWidth = 0;
-            for (let char of text) {
-                totalWidth += charWidths[fontWeight][char] || 0.5;
-            }
-            
-            // Convert to mm (approximate)
-            return (totalWidth * fontSize) / 2;
-        };
-        
-        // NEW: Format currency with tabular numbers
-        const formatCurrency = (value) => {
-            return new Intl.NumberFormat('en-NG', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-                useGrouping: true
-            }).format(value);
-        };
-        
-        // NEW: Add right-aligned row with perfect alignment
-        const addRightAlignedRow = (label, value, options = {}) => {
-            checkPageBreak(10);
-            
-            const {
-                labelColor = colors.primary,
-                valueColor = colors.primary,
-                labelFontSize = 11,
-                valueFontSize = 11,
-                isBold = false,
-                isValueBold = false,
-                hasBackground = false,
-                index = 0,
-                type = 'normal'
-            } = options;
-            
-            // Alternating row background
-            if (hasBackground && index % 2 === 0) {
-                doc.setFillColor(249, 250, 251);
-                doc.rect(margin, y - 4, contentWidth, 10, 'F');
-            }
-            
-            // Draw label
-            doc.setFont("helvetica", isBold ? "bold" : "normal");
-            doc.setTextColor(labelColor);
-            doc.setFontSize(labelFontSize);
-            doc.text(label, margin + 5, y);
-            
-            // Calculate value text
-            let valueText = '';
-            if (type === 'percentage') {
-                valueText = `${value.toFixed(2)}%`;
-            } else {
-                valueText = `${currency} ${formatCurrency(value)}`;
-            }
-            
-            // MANUAL RIGHT ALIGNMENT - Calculate exact position
-            const valueWidth = getTextWidth(valueText, valueFontSize, isValueBold ? 'bold' : 'normal');
-            const rightEdge = pageWidth - margin - 5; // 5mm from right margin
-            
-            // Draw value at calculated position
-            doc.setFont("helvetica", isValueBold ? "bold" : "normal");
-            doc.setTextColor(valueColor);
-            doc.setFontSize(valueFontSize);
-            doc.text(valueText, rightEdge - valueWidth, y);
-            
-            y += isBold ? 9 : 8;
-            return y;
-        };
+        // ========== RADICAL NEW APPROACH ==========
+        // We'll use a SIMPLE table layout with fixed columns
         
         // Helper functions
         const checkPageBreak = (spaceNeeded = 10) => {
@@ -903,15 +811,92 @@ function downloadPDF() {
             y += 10;
         };
         
-        // Fetch values from the actual calculation results, NOT from inputs
-        // Get the results that were already calculated
-        const resultDiv = document.getElementById('result');
-        if (!resultDiv || !resultDiv.innerHTML.trim()) {
-            showNotification('Please calculate your tax first before downloading PDF.', 'warning');
-            return false;
-        }
+        // NEW: Simple format function (uses your existing formatCurrency logic)
+        const formatCurrency = (value) => {
+            if (value === null || value === undefined || isNaN(value)) {
+                return '0.00';
+            }
+            return parseFloat(value).toLocaleString("en-NG", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        };
         
-        // Extract values from the displayed results or calculate them
+        // NEW: Add table row with perfect alignment using COLUMNS
+        const addTableRow = (label, value, options = {}) => {
+            checkPageBreak(10);
+            
+            const {
+                labelColor = colors.primary,
+                valueColor = colors.primary,
+                labelBold = false,
+                valueBold = false,
+                hasBackground = false,
+                index = 0,
+                showCurrency = true,
+                isPercentage = false,
+                isHighlighted = false
+            } = options;
+            
+            // Alternating row background
+            if (hasBackground && index % 2 === 0) {
+                doc.setFillColor(249, 250, 251);
+                doc.rect(margin, y - 4, contentWidth, 10, 'F');
+            }
+            
+            // Highlighted row (for total tax)
+            if (isHighlighted) {
+                doc.setFillColor(254, 242, 242);
+                doc.rect(margin, y - 6, contentWidth, 13, 'F');
+                doc.setDrawColor(252, 165, 165);
+                doc.setLineWidth(0.3);
+                doc.rect(margin, y - 6, contentWidth, 13);
+                y += 2; // Extra space for border
+            }
+            
+            // Define column widths (FIXED positions)
+            const labelColumnEnd = margin + contentWidth * 0.65; // 65% for label
+            const valueColumnStart = labelColumnEnd + 5; // 5mm gap
+            
+            // Draw label (LEFT SIDE)
+            doc.setFont("helvetica", labelBold ? "bold" : "normal");
+            doc.setTextColor(labelColor);
+            doc.setFontSize(labelBold ? 12 : 11);
+            doc.text(label, margin + 5, y);
+            
+            // Prepare value text
+            let valueText = '';
+            if (isPercentage) {
+                valueText = `${parseFloat(value).toFixed(2)}%`;
+            } else if (showCurrency) {
+                valueText = `${currency} ${formatCurrency(value)}`;
+            } else {
+                valueText = formatCurrency(value);
+            }
+            
+            // Draw value (RIGHT SIDE at FIXED position)
+            doc.setFont("helvetica", valueBold ? "bold" : "normal");
+            doc.setTextColor(valueColor);
+            doc.setFontSize(valueBold ? 12 : 11);
+            
+            // Calculate the position for perfect right alignment
+            // Instead of aligning to right edge, align to fixed column
+            const textWidth = doc.getTextWidth(valueText);
+            const maxValueWidth = pageWidth - margin - 5 - valueColumnStart;
+            
+            if (textWidth > maxValueWidth) {
+                // If text is too long, reduce font size
+                doc.setFontSize(9);
+            }
+            
+            // Draw at fixed column position
+            doc.text(valueText, valueColumnStart, y);
+            
+            y += isHighlighted ? 12 : (valueBold ? 9 : 8);
+            return y;
+        };
+        
+        // Fetch values
         const income = parseFloat(document.getElementById('income')?.value.replace(/,/g, '')) || 0;
         const rent = parseFloat(document.getElementById('rent')?.value.replace(/,/g, '')) || 0;
         const pension = parseFloat(document.getElementById('pension')?.value.replace(/,/g, '')) || 0;
@@ -966,9 +951,9 @@ function downloadPDF() {
         
         y += 15;
         
-        // Add all entries with PERFECT right alignment
+        // Add all entries using FIXED COLUMN layout
         const entries = [
-            { label: "ANNUAL INCOME", value: income, color: colors.success, isValueBold: true },
+            { label: "ANNUAL INCOME", value: income, color: colors.success, valueBold: true },
             { label: "RENT PAID", value: rent, color: colors.accent },
             { label: "PENSION CONTRIBUTION", value: pension, color: colors.accent },
             { label: "NHIS CONTRIBUTION", value: nhis, color: colors.accent },
@@ -979,12 +964,10 @@ function downloadPDF() {
         ];
         
         entries.forEach((entry, index) => {
-            addRightAlignedRow(entry.label, entry.value, {
+            addTableRow(entry.label, entry.value, {
                 labelColor: colors.primary,
                 valueColor: entry.color,
-                labelFontSize: 11,
-                valueFontSize: 11,
-                isValueBold: entry.isValueBold || false,
+                valueBold: entry.valueBold || false,
                 hasBackground: true,
                 index: index
             });
@@ -1005,73 +988,104 @@ function downloadPDF() {
         
         y += 15;
         
-        // Add summary with PERFECT alignment
+        // Add summary items
         const summaryItems = [
             { label: "TAXABLE INCOME", value: result.taxable, color: colors.primary },
             { label: "TOTAL DEDUCTIONS", value: result.totalReliefs, color: colors.secondary },
-            { label: "INCOME TAX", value: result.tax, color: colors.accent },
+            { label: "INCOME TAX", value: result.tax, color: colors.accent, valueBold: true },
             { label: "CRYPTO TAX", value: result.cryptoTax, color: colors.warning }
         ];
         
         summaryItems.forEach((item, index) => {
-            addRightAlignedRow(item.label, item.value, {
+            addTableRow(item.label, item.value, {
                 labelColor: item.color,
                 valueColor: item.color,
-                labelFontSize: 11,
-                valueFontSize: 11,
-                isValueBold: false,
+                valueBold: item.valueBold || false,
                 hasBackground: false,
                 index: index
             });
         });
         
         // TOTAL TAX PAYABLE with special styling
-        checkPageBreak(12);
-        
-        // Background for total tax
-        doc.setFillColor(254, 242, 242);
-        doc.rect(margin, y - 6, contentWidth, 13, 'F');
-        doc.setDrawColor(252, 165, 165);
-        doc.setLineWidth(0.3);
-        doc.rect(margin, y - 6, contentWidth, 13);
-        
-        // Add total tax row
-        addRightAlignedRow("TOTAL TAX PAYABLE", result.totalTax, {
+        checkPageBreak(15);
+        addTableRow("TOTAL TAX PAYABLE", result.totalTax, {
             labelColor: colors.danger,
             valueColor: colors.danger,
-            labelFontSize: 13,
-            valueFontSize: 13,
-            isBold: true,
-            isValueBold: true,
-            hasBackground: false
+            labelBold: true,
+            valueBold: true,
+            isHighlighted: true
         });
         
         y += 2;
         
         // MONTHLY ESTIMATE
         checkPageBreak(10);
-        addRightAlignedRow("MONTHLY ESTIMATE", result.monthlyTax, {
+        addTableRow("MONTHLY ESTIMATE", result.monthlyTax, {
             labelColor: colors.success,
             valueColor: colors.success,
-            labelFontSize: 11,
-            valueFontSize: 11,
-            isValueBold: true,
-            hasBackground: false
+            valueBold: true
         });
         
-        // EFFECTIVE TAX RATE (as percentage)
+        // EFFECTIVE TAX RATE
         checkPageBreak(10);
-        addRightAlignedRow("EFFECTIVE TAX RATE", result.effectiveRate, {
+        addTableRow("EFFECTIVE TAX RATE", result.effectiveRate, {
             labelColor: colors.light,
             valueColor: colors.light,
-            labelFontSize: 11,
-            valueFontSize: 11,
-            isValueBold: true,
-            hasBackground: false,
-            type: 'percentage'
+            valueBold: true,
+            isPercentage: true
         });
         
         y += 5;
+        drawSectionLine();
+        
+        // === RESTORED: VISUAL BREAKDOWN (BAR CHART) ===
+        checkPageBreak(60);
+        
+        // Simple bar chart representation
+        if (income > 0) {
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(colors.primary);
+            doc.setFontSize(13);
+            doc.text("TAX BREAKDOWN VISUALIZATION", margin, y);
+            y += 10;
+            
+            // Create a simple bar chart
+            const barWidth = contentWidth;
+            const barHeight = 8;
+            const barY = y;
+            
+            // Total income bar (light background)
+            doc.setFillColor(226, 232, 240);
+            doc.roundedRect(margin, barY, barWidth, barHeight, 2, 2, 'F');
+            
+            // Tax portion
+            const taxWidth = (result.totalTax / income) * barWidth;
+            if (taxWidth > 0) {
+                doc.setFillColor(colors.danger);
+                doc.roundedRect(margin, barY, taxWidth, barHeight, 2, 2, 'F');
+            }
+            
+            y += 15;
+            
+            // Legend
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "normal");
+            
+            // Tax portion label
+            doc.setFillColor(colors.danger);
+            doc.circle(margin + 5, y - 2, 3, 'F');
+            doc.setTextColor(colors.primary);
+            doc.text(`Tax (${result.effectiveRate.toFixed(1)}%)`, margin + 12, y);
+            
+            // Take-home portion label
+            const takeHomePercent = 100 - result.effectiveRate;
+            doc.setFillColor(colors.success);
+            doc.circle(margin + 70, y - 2, 3, 'F');
+            doc.text(`Take-home (${takeHomePercent.toFixed(1)}%)`, margin + 77, y);
+            
+            y += 12;
+        }
+        
         drawSectionLine();
         
         // === DEDUCTIONS BREAKDOWN ===
@@ -1084,21 +1098,20 @@ function downloadPDF() {
         y += 10;
         
         const deductions = [
-            { label: "Rent Relief", value: result.rentRelief, color: colors.accent },
-            { label: "Pension Relief", value: result.pensionRelief, color: colors.accent },
-            { label: "Insurance Relief", value: result.insuranceRelief, color: colors.accent },
-            { label: "NHIS Contribution", value: result.nhis, color: colors.accent },
-            { label: "NHF Contribution", value: result.nhf, color: colors.accent },
-            { label: "Business Expenses", value: result.expensesApplied, color: colors.accent }
+            { label: "Rent Relief", value: result.rentRelief },
+            { label: "Pension Relief", value: result.pensionRelief },
+            { label: "Insurance Relief", value: result.insuranceRelief },
+            { label: "NHIS Contribution", value: result.nhis },
+            { label: "NHF Contribution", value: result.nhf },
+            { label: "Business Expenses", value: result.expensesApplied }
         ];
         
         deductions.forEach((deduction, index) => {
-            addRightAlignedRow(deduction.label, deduction.value, {
+            addTableRow(deduction.label, deduction.value, {
                 labelColor: colors.secondary,
-                valueColor: deduction.color,
+                valueColor: colors.accent,
                 labelFontSize: 10,
                 valueFontSize: 10,
-                isValueBold: false,
                 hasBackground: true,
                 index: index
             });
@@ -1120,16 +1133,14 @@ function downloadPDF() {
             { label: "Gross Monthly Income", value: income / 12 },
             { label: "Monthly Taxable", value: result.monthlyTaxable },
             { label: "Monthly Tax", value: result.monthlyTax },
-            { label: "Net Monthly Income", value: result.monthlyTakeHome, color: colors.success, isBold: true }
+            { label: "Net Monthly Income", value: result.monthlyTakeHome, color: colors.success, valueBold: true }
         ];
         
         monthlyItems.forEach((item, index) => {
-            addRightAlignedRow(item.label, item.value, {
+            addTableRow(item.label, item.value, {
                 labelColor: colors.secondary,
                 valueColor: item.color || colors.primary,
-                labelFontSize: 10,
-                valueFontSize: 10,
-                isValueBold: item.isBold || false,
+                valueBold: item.valueBold || false,
                 hasBackground: index % 2 === 0,
                 index: index
             });
@@ -1219,7 +1230,6 @@ function downloadPDF() {
         return false;
     }
 }
-      
 
 // Missing functions that need to be added
 function shareWhatsApp() {
