@@ -764,7 +764,7 @@ function updateCurrency() {
     }
 }
 
- function downloadPDF() {
+function downloadPDF() {
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ 
@@ -781,37 +781,109 @@ function updateCurrency() {
         
         // Color scheme - Fintech professional colors
         const colors = {
-            primary: '#2D3748', // Dark gray for headers
-            secondary: '#4A5568', // Medium gray
-            accent: '#3182CE', // Blue accent
-            success: '#38A169', // Green
-            warning: '#D69E2E', // Yellow
-            danger: '#E53E3E', // Red
-            light: '#718096', // Light gray
-            background: '#F7FAFC' // Very light gray
+            primary: '#2D3748',
+            secondary: '#4A5568',
+            accent: '#3182CE',
+            success: '#38A169',
+            warning: '#D69E2E',
+            danger: '#E53E3E',
+            light: '#718096',
+            background: '#F7FAFC'
         };
         
-        // NEW: Tabular number formatting function
-        // This ensures digits are monospaced while keeping commas/decimal proportional
-        const formatCurrencyTabular = (value) => {
-            // Format with proper thousands separators and 2 decimal places
-            const parts = value.toFixed(2).split('.');
-            let integerPart = parts[0];
-            const decimalPart = parts[1];
+        // ========== NEW SOLUTION: Manual Text Width Calculation ==========
+        
+        // Helper to get exact text width in mm
+        const getTextWidth = (text, fontSize = 11, fontStyle = 'normal') => {
+            const currentFont = doc.internal.getFont();
+            const fontName = currentFont.fontName;
+            const fontWeight = fontStyle === 'bold' ? 'bold' : 'normal';
             
-            // Add thousands separators
-            integerPart = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            // Approximate widths for helvetica (these are in PDF units, not mm)
+            const charWidths = {
+                'normal': {
+                    '0': 0.5, '1': 0.5, '2': 0.5, '3': 0.5, '4': 0.5,
+                    '5': 0.5, '6': 0.5, '7': 0.5, '8': 0.5, '9': 0.5,
+                    '.': 0.25, ',': 0.25,
+                    '₦': 0.6, '$': 0.5, '€': 0.6, '£': 0.6,
+                    ' ': 0.25, '%': 0.8
+                },
+                'bold': {
+                    '0': 0.55, '1': 0.55, '2': 0.55, '3': 0.55, '4': 0.55,
+                    '5': 0.55, '6': 0.55, '7': 0.55, '8': 0.55, '9': 0.55,
+                    '.': 0.3, ',': 0.3,
+                    '₦': 0.65, '$': 0.55, '€': 0.65, '£': 0.65,
+                    ' ': 0.3, '%': 0.85
+                }
+            };
             
-            // Return formatted with currency symbol
-            return `${currency} ${integerPart}.${decimalPart}`;
+            // Calculate total width
+            let totalWidth = 0;
+            for (let char of text) {
+                totalWidth += charWidths[fontWeight][char] || 0.5;
+            }
+            
+            // Convert to mm (approximate)
+            return (totalWidth * fontSize) / 2;
         };
         
-        // NEW: Calculate exact text width for perfect alignment
-        const getTextWidth = (text, fontSize = 11) => {
-            // Get string width in points, then convert to mm
-            const fontSizePt = fontSize * 0.3527778; // Convert mm to points
-            const width = doc.getStringUnitWidth(text) * fontSizePt;
-            return width;
+        // NEW: Format currency with tabular numbers
+        const formatCurrency = (value) => {
+            return new Intl.NumberFormat('en-NG', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+                useGrouping: true
+            }).format(value);
+        };
+        
+        // NEW: Add right-aligned row with perfect alignment
+        const addRightAlignedRow = (label, value, options = {}) => {
+            checkPageBreak(10);
+            
+            const {
+                labelColor = colors.primary,
+                valueColor = colors.primary,
+                labelFontSize = 11,
+                valueFontSize = 11,
+                isBold = false,
+                isValueBold = false,
+                hasBackground = false,
+                index = 0,
+                type = 'normal'
+            } = options;
+            
+            // Alternating row background
+            if (hasBackground && index % 2 === 0) {
+                doc.setFillColor(249, 250, 251);
+                doc.rect(margin, y - 4, contentWidth, 10, 'F');
+            }
+            
+            // Draw label
+            doc.setFont("helvetica", isBold ? "bold" : "normal");
+            doc.setTextColor(labelColor);
+            doc.setFontSize(labelFontSize);
+            doc.text(label, margin + 5, y);
+            
+            // Calculate value text
+            let valueText = '';
+            if (type === 'percentage') {
+                valueText = `${value.toFixed(2)}%`;
+            } else {
+                valueText = `${currency} ${formatCurrency(value)}`;
+            }
+            
+            // MANUAL RIGHT ALIGNMENT - Calculate exact position
+            const valueWidth = getTextWidth(valueText, valueFontSize, isValueBold ? 'bold' : 'normal');
+            const rightEdge = pageWidth - margin - 5; // 5mm from right margin
+            
+            // Draw value at calculated position
+            doc.setFont("helvetica", isValueBold ? "bold" : "normal");
+            doc.setTextColor(valueColor);
+            doc.setFontSize(valueFontSize);
+            doc.text(valueText, rightEdge - valueWidth, y);
+            
+            y += isBold ? 9 : 8;
+            return y;
         };
         
         // Helper functions
@@ -831,35 +903,42 @@ function updateCurrency() {
             y += 10;
         };
         
-        // Fetch values
-        const income = parseFloat(document.getElementById('income')?.value) || 0;
-        const rent = parseFloat(document.getElementById('rent')?.value) || 0;
-        const pension = parseFloat(document.getElementById('pension')?.value) || 0;
-        const nhis = parseFloat(document.getElementById('nhis')?.value) || 0;
-        const nhf = parseFloat(document.getElementById('nhf')?.value) || 0;
-        const insurance = parseFloat(document.getElementById('insurance')?.value) || 0;
-        const crypto = parseFloat(document.getElementById('crypto')?.value) || 0;
-        const expenses = parseFloat(document.getElementById('expenses')?.value) || 0;
+        // Fetch values from the actual calculation results, NOT from inputs
+        // Get the results that were already calculated
+        const resultDiv = document.getElementById('result');
+        if (!resultDiv || !resultDiv.innerHTML.trim()) {
+            showNotification('Please calculate your tax first before downloading PDF.', 'warning');
+            return false;
+        }
+        
+        // Extract values from the displayed results or calculate them
+        const income = parseFloat(document.getElementById('income')?.value.replace(/,/g, '')) || 0;
+        const rent = parseFloat(document.getElementById('rent')?.value.replace(/,/g, '')) || 0;
+        const pension = parseFloat(document.getElementById('pension')?.value.replace(/,/g, '')) || 0;
+        const nhis = parseFloat(document.getElementById('nhis')?.value.replace(/,/g, '')) || 0;
+        const nhf = parseFloat(document.getElementById('nhf')?.value.replace(/,/g, '')) || 0;
+        const insurance = parseFloat(document.getElementById('insurance')?.value.replace(/,/g, '')) || 0;
+        const crypto = parseFloat(document.getElementById('crypto')?.value.replace(/,/g, '')) || 0;
+        const expenses = parseFloat(document.getElementById('expenses')?.value.replace(/,/g, '')) || 0;
         const currency = document.getElementById('currency')?.value || '₦';
         
+        // Recalculate to get consistent values
+        const result = calculateNewTax2026(income, rent, pension, nhis, nhf, insurance, crypto, expenses);
+        
         // === HEADER SECTION ===
-        // Background rectangle
         doc.setFillColor(247, 250, 252);
         doc.roundedRect(margin - 5, 10, contentWidth + 10, 45, 3, 3, 'F');
         
-        // Logo/Title
         doc.setFont("helvetica", "bold");
         doc.setTextColor(colors.primary);
         doc.setFontSize(24);
         doc.text("NG TAX CALCULATOR", pageWidth / 2, 25, { align: "center" });
         
-        // Subtitle
         doc.setFont("helvetica", "normal");
         doc.setTextColor(colors.secondary);
         doc.setFontSize(12);
         doc.text("Professional Tax Estimation Report - 2026", pageWidth / 2, 35, { align: "center" });
         
-        // Report details
         doc.setFontSize(10);
         doc.setTextColor(colors.light);
         const reportDate = new Date().toLocaleDateString('en-NG', {
@@ -876,7 +955,6 @@ function updateCurrency() {
         // === INCOME & CONTRIBUTIONS SECTION ===
         checkPageBreak(100);
         
-        // Section header with colored background
         doc.setFillColor(colors.accent);
         doc.setDrawColor(colors.accent);
         doc.roundedRect(margin, y, contentWidth, 10, 2, 2, 'F');
@@ -888,62 +966,36 @@ function updateCurrency() {
         
         y += 15;
         
-        // Create entries
+        // Add all entries with PERFECT right alignment
         const entries = [
-            { label: "ANNUAL INCOME", value: income, type: "income" },
-            { label: "RENT PAID", value: rent, type: "deduction" },
-            { label: "PENSION CONTRIBUTION", value: pension, type: "deduction" },
-            { label: "NHIS CONTRIBUTION", value: nhis, type: "deduction" },
-            { label: "NHF CONTRIBUTION", value: nhf, type: "deduction" },
-            { label: "INSURANCE PREMIUM", value: insurance, type: "deduction" },
-            { label: "CRYPTO GAINS", value: crypto, type: "income" },
-            { label: "BUSINESS EXPENSES", value: expenses, type: "deduction" }
+            { label: "ANNUAL INCOME", value: income, color: colors.success, isValueBold: true },
+            { label: "RENT PAID", value: rent, color: colors.accent },
+            { label: "PENSION CONTRIBUTION", value: pension, color: colors.accent },
+            { label: "NHIS CONTRIBUTION", value: nhis, color: colors.accent },
+            { label: "NHF CONTRIBUTION", value: nhf, color: colors.accent },
+            { label: "INSURANCE PREMIUM", value: insurance, color: colors.accent },
+            { label: "CRYPTO GAINS", value: crypto, color: colors.accent },
+            { label: "BUSINESS EXPENSES", value: expenses, color: colors.accent }
         ];
         
-        // Find the longest value to ensure consistent alignment
-        const maxValueLength = Math.max(...entries.map(e => 
-            formatCurrencyTabular(e.value).length
-        ));
-        
-        // Fixed right edge position (5mm from right margin)
-        const rightEdgeX = pageWidth - margin - 5;
-        
-        // Add all entries with PERFECT right alignment
-        entries.forEach((item, index) => {
-            checkPageBreak(10);
-            
-            // Alternating row background
-            if (index % 2 === 0) {
-                doc.setFillColor(249, 250, 251);
-                doc.rect(margin, y - 4, contentWidth, 10, 'F');
-            }
-            
-            // Label (left-aligned)
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(colors.primary);
-            doc.setFontSize(11);
-            doc.text(item.label, margin + 5, y);
-            
-            // Value with PERFECT right alignment to the edge
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(item.type === "income" ? colors.success : colors.accent);
-            
-            // Format the value
-            const valueText = formatCurrencyTabular(item.value);
-            
-            // Draw at fixed right edge position
-            doc.text(valueText, rightEdgeX, y, { align: "right" });
-            
-            y += 8;
+        entries.forEach((entry, index) => {
+            addRightAlignedRow(entry.label, entry.value, {
+                labelColor: colors.primary,
+                valueColor: entry.color,
+                labelFontSize: 11,
+                valueFontSize: 11,
+                isValueBold: entry.isValueBold || false,
+                hasBackground: true,
+                index: index
+            });
         });
         
-        y += 5;
+        y += 3;
         drawSectionLine();
         
         // === TAX CALCULATION SUMMARY ===
         checkPageBreak(80);
         
-        // Section header
         doc.setFillColor(colors.success);
         doc.roundedRect(margin, y, contentWidth, 10, 2, 2, 'F');
         
@@ -953,89 +1005,27 @@ function updateCurrency() {
         
         y += 15;
         
-        // Calculate tax (simplified Nigerian tax calculation)
-        const CRA = 200000; // Consolidated Relief Allowance
-        const minimumTax = 0.01 * income;
-        const consolidatedRelief = Math.min(CRA, minimumTax) + Math.min(CRA, 0.2 * income);
-        const totalDeductions = rent + pension + nhis + nhf + insurance + expenses;
-        const taxableIncome = Math.max(0, income - consolidatedRelief - totalDeductions);
-        
-        // Calculate tax based on Nigerian progressive tax brackets
-        let taxPayable = 0;
-        const taxBrackets = [
-            { limit: 300000, rate: 0.07 },
-            { limit: 600000, rate: 0.11 },
-            { limit: 1100000, rate: 0.15 },
-            { limit: 1600000, rate: 0.19 },
-            { limit: 3200000, rate: 0.21 },
-            { limit: Infinity, rate: 0.24 }
-        ];
-        
-        let remainingIncome = taxableIncome;
-        let previousLimit = 0;
-        
-        taxBrackets.forEach(bracket => {
-            if (remainingIncome > 0) {
-                const taxableAmount = Math.min(bracket.limit - previousLimit, remainingIncome);
-                taxPayable += taxableAmount * bracket.rate;
-                remainingIncome -= taxableAmount;
-                previousLimit = bracket.limit;
-            }
-        });
-        
-        // Add crypto tax (assuming 10% on gains)
-        const cryptoTax = crypto * 0.1;
-        const totalTax = taxPayable + cryptoTax;
-        const monthlyTax = totalTax / 12;
-        const effectiveTaxRate = income > 0 ? (totalTax / income) * 100 : 0;
-        
-        // Summary items - ALL RIGHT-ALIGNED TO THE SAME EDGE
+        // Add summary with PERFECT alignment
         const summaryItems = [
-            { 
-                label: "TAXABLE INCOME", 
-                value: taxableIncome, 
-                color: colors.primary,
-                isBold: false 
-            },
-            { 
-                label: "TOTAL DEDUCTIONS", 
-                value: totalDeductions, 
-                color: colors.secondary,
-                isBold: false 
-            },
-            { 
-                label: "INCOME TAX PAYABLE", 
-                value: taxPayable, 
-                color: colors.accent,
-                isBold: true 
-            },
-            { 
-                label: "CRYPTO TAX", 
-                value: cryptoTax, 
-                color: colors.warning,
-                isBold: false 
-            }
+            { label: "TAXABLE INCOME", value: result.taxable, color: colors.primary },
+            { label: "TOTAL DEDUCTIONS", value: result.totalReliefs, color: colors.secondary },
+            { label: "INCOME TAX", value: result.tax, color: colors.accent },
+            { label: "CRYPTO TAX", value: result.cryptoTax, color: colors.warning }
         ];
         
-        // Add summary items with consistent right alignment
         summaryItems.forEach((item, index) => {
-            checkPageBreak(10);
-            
-            // Label
-            doc.setFont("helvetica", item.isBold ? "bold" : "normal");
-            doc.setTextColor(item.color);
-            doc.setFontSize(item.isBold ? 12 : 11);
-            doc.text(item.label, margin + 5, y);
-            
-            // Value - ALIGNED TO EXACT RIGHT EDGE
-            const valueText = formatCurrencyTabular(item.value);
-            doc.setFont("helvetica", item.isBold ? "bold" : "normal");
-            doc.text(valueText, rightEdgeX, y, { align: "right" });
-            
-            y += item.isBold ? 9 : 8;
+            addRightAlignedRow(item.label, item.value, {
+                labelColor: item.color,
+                valueColor: item.color,
+                labelFontSize: 11,
+                valueFontSize: 11,
+                isValueBold: false,
+                hasBackground: false,
+                index: index
+            });
         });
         
-        // Add TOTAL TAX PAYABLE with special styling
+        // TOTAL TAX PAYABLE with special styling
         checkPageBreak(12);
         
         // Background for total tax
@@ -1045,95 +1035,107 @@ function updateCurrency() {
         doc.setLineWidth(0.3);
         doc.rect(margin, y - 6, contentWidth, 13);
         
-        // Total tax label
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(colors.danger);
-        doc.setFontSize(13);
-        doc.text("TOTAL TAX PAYABLE", margin + 5, y);
+        // Add total tax row
+        addRightAlignedRow("TOTAL TAX PAYABLE", result.totalTax, {
+            labelColor: colors.danger,
+            valueColor: colors.danger,
+            labelFontSize: 13,
+            valueFontSize: 13,
+            isBold: true,
+            isValueBold: true,
+            hasBackground: false
+        });
         
-        // Total tax value - ALIGNED TO EXACT RIGHT EDGE
-        const totalTaxText = formatCurrencyTabular(totalTax);
-        doc.text(totalTaxText, rightEdgeX, y, { align: "right" });
+        y += 2;
         
-        y += 10;
-        
-        // Add monthly estimate
+        // MONTHLY ESTIMATE
         checkPageBreak(10);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(colors.success);
-        doc.setFontSize(11);
-        doc.text("MONTHLY ESTIMATE", margin + 5, y);
+        addRightAlignedRow("MONTHLY ESTIMATE", result.monthlyTax, {
+            labelColor: colors.success,
+            valueColor: colors.success,
+            labelFontSize: 11,
+            valueFontSize: 11,
+            isValueBold: true,
+            hasBackground: false
+        });
         
-        const monthlyTaxText = formatCurrencyTabular(monthlyTax);
-        doc.setFont("helvetica", "bold");
-        doc.text(monthlyTaxText, rightEdgeX, y, { align: "right" });
-        
-        y += 8;
-        
-        // Add effective tax rate as percentage
+        // EFFECTIVE TAX RATE (as percentage)
         checkPageBreak(10);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(colors.light);
-        doc.setFontSize(11);
-        doc.text("EFFECTIVE TAX RATE", margin + 5, y);
-        
-        doc.setFont("helvetica", "bold");
-        const rateText = `${effectiveTaxRate.toFixed(2)}%`;
-        // For percentage, also align to the same right edge
-        doc.text(rateText, rightEdgeX, y, { align: "right" });
-        y += 8;
+        addRightAlignedRow("EFFECTIVE TAX RATE", result.effectiveRate, {
+            labelColor: colors.light,
+            valueColor: colors.light,
+            labelFontSize: 11,
+            valueFontSize: 11,
+            isValueBold: true,
+            hasBackground: false,
+            type: 'percentage'
+        });
         
         y += 5;
         drawSectionLine();
         
-        // === VISUAL BREAKDOWN ===
+        // === DEDUCTIONS BREAKDOWN ===
         checkPageBreak(60);
         
-        // Simple bar chart representation
-        if (income > 0) {
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(colors.primary);
-            doc.setFontSize(13);
-            doc.text("TAX BREAKDOWN VISUALIZATION", margin, y);
-            y += 10;
-            
-            // Create a simple bar chart
-            const barWidth = contentWidth;
-            const barHeight = 10;
-            const barY = y;
-            
-            // Total income bar (light background)
-            doc.setFillColor(226, 232, 240);
-            doc.roundedRect(margin, barY, barWidth, barHeight, 2, 2, 'F');
-            
-            // Tax portion
-            const taxWidth = (totalTax / income) * barWidth;
-            if (taxWidth > 0) {
-                doc.setFillColor(colors.danger);
-                doc.roundedRect(margin, barY, taxWidth, barHeight, 2, 2, 'F');
-            }
-            
-            y += 18;
-            
-            // Legend
-            doc.setFontSize(9);
-            doc.setFont("helvetica", "normal");
-            
-            // Tax portion label
-            doc.setFillColor(colors.danger);
-            doc.circle(margin + 5, y - 2, 3, 'F');
-            doc.setTextColor(colors.primary);
-            doc.text(`Tax (${effectiveTaxRate.toFixed(1)}%)`, margin + 12, y);
-            
-            // Take-home portion label
-            const takeHomePercent = 100 - effectiveTaxRate;
-            doc.setFillColor(colors.success);
-            doc.circle(margin + 70, y - 2, 3, 'F');
-            doc.text(`Take-home (${takeHomePercent.toFixed(1)}%)`, margin + 77, y);
-            
-            y += 12;
-        }
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(colors.primary);
+        doc.setFontSize(13);
+        doc.text("DEDUCTIONS BREAKDOWN", margin, y);
+        y += 10;
         
+        const deductions = [
+            { label: "Rent Relief", value: result.rentRelief, color: colors.accent },
+            { label: "Pension Relief", value: result.pensionRelief, color: colors.accent },
+            { label: "Insurance Relief", value: result.insuranceRelief, color: colors.accent },
+            { label: "NHIS Contribution", value: result.nhis, color: colors.accent },
+            { label: "NHF Contribution", value: result.nhf, color: colors.accent },
+            { label: "Business Expenses", value: result.expensesApplied, color: colors.accent }
+        ];
+        
+        deductions.forEach((deduction, index) => {
+            addRightAlignedRow(deduction.label, deduction.value, {
+                labelColor: colors.secondary,
+                valueColor: deduction.color,
+                labelFontSize: 10,
+                valueFontSize: 10,
+                isValueBold: false,
+                hasBackground: true,
+                index: index
+            });
+        });
+        
+        y += 5;
+        drawSectionLine();
+        
+        // === MONTHLY SUMMARY ===
+        checkPageBreak(40);
+        
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(colors.primary);
+        doc.setFontSize(13);
+        doc.text("MONTHLY SUMMARY", margin, y);
+        y += 10;
+        
+        const monthlyItems = [
+            { label: "Gross Monthly Income", value: income / 12 },
+            { label: "Monthly Taxable", value: result.monthlyTaxable },
+            { label: "Monthly Tax", value: result.monthlyTax },
+            { label: "Net Monthly Income", value: result.monthlyTakeHome, color: colors.success, isBold: true }
+        ];
+        
+        monthlyItems.forEach((item, index) => {
+            addRightAlignedRow(item.label, item.value, {
+                labelColor: colors.secondary,
+                valueColor: item.color || colors.primary,
+                labelFontSize: 10,
+                valueFontSize: 10,
+                isValueBold: item.isBold || false,
+                hasBackground: index % 2 === 0,
+                index: index
+            });
+        });
+        
+        y += 5;
         drawSectionLine();
         
         // === DISCLAIMER SECTION ===
@@ -1149,7 +1151,6 @@ function updateCurrency() {
         doc.setTextColor(colors.secondary);
         doc.setFontSize(9);
         
-        // Use splitTextToSize for proper text wrapping
         const disclaimerText = "This tax estimation report is generated for informational and planning purposes only. The calculations are based on current Nigerian tax laws as of 2026 and common assumptions. Actual tax liabilities may vary based on individual circumstances, additional deductions, exemptions, and specific tax regulations applicable to your situation.";
         
         const disclaimerLines = doc.splitTextToSize(disclaimerText, contentWidth);
@@ -1161,7 +1162,6 @@ function updateCurrency() {
         
         y += 3;
         
-        // Bullet points
         const bulletPoints = [
             "Federal Inland Revenue Service (FIRS)",
             "A licensed tax professional or accountant",
@@ -1182,7 +1182,6 @@ function updateCurrency() {
         doc.setTextColor(colors.light);
         doc.setFontSize(8);
         
-        // Page numbers
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
@@ -1190,10 +1189,10 @@ function updateCurrency() {
             doc.text("Confidential - For Client Use Only", margin, pageHeight - 10);
         }
         
-        // Watermark on first page (more subtle)
+        // Subtle watermark
         doc.setPage(1);
-        doc.setTextColor(245, 245, 245);
-        doc.setFontSize(50);
+        doc.setTextColor(248, 250, 252);
+        doc.setFontSize(40);
         doc.setFont("helvetica", "bold");
         doc.text("ESTIMATE", pageWidth / 2, pageHeight / 2, { 
             align: "center",
@@ -1208,16 +1207,15 @@ function updateCurrency() {
         doc.text("https://ngtaxcalculator.online", pageWidth / 2, pageHeight - 12, { align: "center" });
         
         // Save PDF
-        const fileName = `Tax_Report_${new Date().toISOString().slice(0,10)}.pdf`;
+        const fileName = `NG_Tax_Report_${new Date().toISOString().slice(0,10)}.pdf`;
         doc.save(fileName);
         
-        // Success notification
-        console.log("PDF generated successfully!");
+        showNotification('PDF report downloaded successfully!', 'success');
         return true;
         
     } catch (err) {
         console.error("PDF generation failed:", err);
-        alert("Failed to generate PDF report. Please try again or contact support.");
+        showNotification('Failed to generate PDF. Please try again.', 'error');
         return false;
     }
 }
